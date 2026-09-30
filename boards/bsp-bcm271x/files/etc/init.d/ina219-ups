@@ -1,0 +1,57 @@
+#!/bin/sh /etc/rc.common
+
+START=15
+
+NAME=ina219-ups
+
+# Declare the UPS INA219 to the kernel so the ina2xx hwmon driver binds and
+# battery voltage/current appear under /sys/class/hwmon. The CM5 node has no
+# devicetree node for it, so it is instantiated from /etc/config/ups.
+
+log() {
+	logger -t "$NAME" "$@"
+}
+
+boot() {
+	case "$(board_name)" in
+	bcm2712,mm8108-usb) ;;
+	*) return 0 ;;
+	esac
+
+	start
+}
+
+start() {
+	local enabled bus address shunt addr dev
+
+	enabled=$(uci -q get ups.battery.enabled)
+	[ "$enabled" = "0" ] && return 0
+
+	bus=$(uci -q get ups.battery.bus)
+	address=$(uci -q get ups.battery.address)
+	shunt=$(uci -q get ups.battery.shunt_uohm)
+	[ -n "$bus" ] && [ -n "$address" ] || return 0
+
+	if [ ! -e "/sys/bus/i2c/devices/i2c-$bus/new_device" ]; then
+		log "i2c-$bus not present, INA219 not configured"
+		return 0
+	fi
+
+	addr=$(printf '%04x' "$address")
+	dev="/sys/bus/i2c/devices/$bus-$addr"
+
+	if [ ! -e "$dev" ]; then
+		echo "ina219 $address" > "/sys/bus/i2c/devices/i2c-$bus/new_device" || {
+			log "failed to add ina219 at $address on i2c-$bus"
+			return 0
+		}
+	fi
+
+	if [ -n "$shunt" ]; then
+		for f in "$dev"/shunt_resistor "$dev"/hwmon/hwmon*/shunt_resistor; do
+			[ -w "$f" ] && echo "$shunt" > "$f"
+		done
+	fi
+
+	log "ina219 at $address on i2c-$bus"
+}

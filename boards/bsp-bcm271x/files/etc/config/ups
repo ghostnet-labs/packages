@@ -1,0 +1,8 @@
+# INA219 battery/UPS monitor on the CM5 node (Waveshare UPS Module 3S).
+# The address is the module's documented default; confirm it on arrival
+# with `i2cdetect -y 1` and change it here if it differs.
+config ina219 'battery'
+	option enabled '1'
+	option bus '1'
+	option address '0x41'
+	option shunt_uohm '10000'
