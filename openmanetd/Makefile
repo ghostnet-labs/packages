@@ -3,11 +3,13 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=openmanetd
 
 PKG_VERSION:=1.3.10
-PKG_RELEASE:=2
+PKG_RELEASE:=3
 
 PKG_SOURCE_PROTO:=git
-PKG_SOURCE_URL:=https://github.com/OpenMANET/openmanetd
-PKG_SOURCE_VERSION:=$(PKG_VERSION)
+# stupidmonk37 fork, branch ekh-1.3.10: release 1.3.10 plus CM5
+# (bcm2712,mm8108-usb) board support.
+PKG_SOURCE_URL:=https://github.com/stupidmonk37/openmanetd
+PKG_SOURCE_VERSION:=f1ff465b848754f7c2ac745f959e65ce1fbc899e
 PKG_HASH:=skip
 
 PKG_LICENSE:=MIT

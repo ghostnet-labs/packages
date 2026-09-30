@@ -1,0 +1,49 @@
+#!/bin/sh
+. /lib/functions.sh
+. /lib/functions/uci-defaults.sh
+
+# Give the CM5 node's 2.4/5 GHz radio (ath10k Mini-PCIe card) the same
+# OpenMANET AP defaults as the other boards: fixed channel, US country,
+# enabled, and the openmanet SSID/key. The HaLow radio (type morse) is
+# left to bsp-common's 99_morse_radio_defaults.
+setup_openmanet_wifi_radio() {
+	local radio="$1"
+	local type band channel ssid_name
+
+	config_get type "$radio" type
+	[ "$type" = "morse" ] && return 0
+
+	config_get band "$radio" band
+	case "$band" in
+	2g) channel=6 ;;
+	5g) channel=36 ;;
+	*) return 0 ;;
+	esac
+
+	uci set wireless."$radio".channel="$channel"
+	uci set wireless."$radio".country="US"
+	uci set wireless."$radio".disabled="0"
+
+	ssid_name="openmanet"
+	[ "$band" = "5g" ] && ssid_name="${ssid_name}_5g"
+	uci -q get wireless.default_"$radio" >/dev/null || return 0
+	uci set wireless.default_"$radio".ssid="$ssid_name"
+	uci set wireless.default_"$radio".encryption="psk2"
+	uci set wireless.default_"$radio".key="openmanet"
+}
+
+board=$(board_name)
+
+board_config_update
+
+case "$board" in
+bcm2712,mm8108-usb)
+	config_load wireless
+	config_foreach setup_openmanet_wifi_radio wifi-device
+	uci -q commit wireless
+	;;
+esac
+
+board_config_flush
+
+exit 0
