@@ -7,9 +7,9 @@ PKG_RELEASE:=3
 
 PKG_SOURCE_PROTO:=git
 # stupidmonk37 fork, branch ekh-1.3.10: release 1.3.10 plus CM5
-# (bcm2712,mm8108-usb) board support.
+# (bcm2712,mm8108-usb) board support and dashboard battery status.
 PKG_SOURCE_URL:=https://github.com/stupidmonk37/openmanetd
-PKG_SOURCE_VERSION:=f1ff465b848754f7c2ac745f959e65ce1fbc899e
+PKG_SOURCE_VERSION:=58f1bf8fc8fd0e2a55ce564ecdbd3dbe2b27fa42
 PKG_HASH:=skip
 
 PKG_LICENSE:=MIT
