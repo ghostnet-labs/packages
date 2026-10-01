@@ -3,13 +3,13 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=openmanetd
 
 PKG_VERSION:=1.3.10
-PKG_RELEASE:=3
+PKG_RELEASE:=4
 
 PKG_SOURCE_PROTO:=git
-# stupidmonk37 fork, branch ekh-1.3.10: release 1.3.10 plus CM5
+# ghostnet-labs fork, branch ekh-1.3.10: release 1.3.10 plus CM5
 # (bcm2712,mm8108-usb) board support and dashboard battery status.
-PKG_SOURCE_URL:=https://github.com/stupidmonk37/openmanetd
-PKG_SOURCE_VERSION:=58f1bf8fc8fd0e2a55ce564ecdbd3dbe2b27fa42
+PKG_SOURCE_URL:=https://github.com/ghostnet-labs/openmanetd
+PKG_SOURCE_VERSION:=0bba647fb2f852dc5dca1093d0988dc0106c64f8
 PKG_HASH:=skip
 
 PKG_LICENSE:=MIT
