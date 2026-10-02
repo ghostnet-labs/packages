@@ -12,6 +12,19 @@ log() {
 	logger -t "$NAME" "$@"
 }
 
+# Print the number of the first i2c-gpio (bit-banged) adapter, if any.
+gpio_bus() {
+	local d
+
+	for d in /sys/bus/i2c/devices/i2c-*; do
+		grep -qs "i2c-gpio" "$d/of_node/compatible" || continue
+		echo "${d##*/i2c-}"
+		return 0
+	done
+
+	return 1
+}
+
 boot() {
 	case "$(board_name)" in
 	bcm2712,mm8108-usb) ;;
@@ -31,6 +44,13 @@ start() {
 	address=$(uci -q get ups.battery.address)
 	shunt=$(uci -q get ups.battery.shunt_uohm)
 	[ -n "$bus" ] && [ -n "$address" ] || return 0
+
+	if [ "$bus" = "gpio" ]; then
+		bus=$(gpio_bus) || {
+			log "no i2c-gpio adapter, INA219 not configured"
+			return 0
+		}
+	fi
 
 	if [ ! -e "/sys/bus/i2c/devices/i2c-$bus/new_device" ]; then
 		log "i2c-$bus not present, INA219 not configured"
