@@ -1,0 +1,24 @@
+#!/bin/sh
+
+# The Ghostnet V1 carrier monitors the battery with an INA228 on the system
+# I2C bus (GPIO2/3, i2c-1) across a 10 mOhm shunt (v1-reference sections
+# 12-13). The ina238 driver's defaults match that design: 10 mOhm shunt and
+# the +/-163.84 mV range. 0x40 assumes A0 and A1 strapped to GND; change it
+# here if the schematic straps differ.
+
+. /lib/functions.sh
+
+case "$(board_name)" in
+ghostnet,v1) ;;
+*) exit 0 ;;
+esac
+
+uci -q batch <<EOT
+set ups.battery.chip='ina228'
+set ups.battery.bus='1'
+set ups.battery.address='0x40'
+set ups.battery.shunt_uohm='10000'
+commit ups
+EOT
+
+exit 0

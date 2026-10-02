@@ -37,7 +37,8 @@ board=$(board_name)
 board_config_update
 
 case "$board" in
-bcm2712,mm8108-usb)
+bcm2712,mm8108-usb|\
+ghostnet,v1)
 	config_load wireless
 	config_foreach setup_openmanet_wifi_radio wifi-device
 	uci -q commit wireless

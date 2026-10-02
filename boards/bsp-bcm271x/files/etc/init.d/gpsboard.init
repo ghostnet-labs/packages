@@ -11,9 +11,11 @@ GPIO_WAKE=12      # GPS_WAKE_UP (high = standby, low = active)
 boot() {
     # The WM1302 reset/wake pins are not a GNSS module on the CM5 node: GPIO25
     # is the CAN controller interrupt on the Waveshare bench carrier and GPIO12
-    # feeds its RS485 jumper. Leave them alone there.
+    # feeds its RS485 jumper. On the Ghostnet V1 carrier GPIO25 is
+    # VLM_USB_FAULT_N and GPIO12 is POWER_GOOD, both inputs. Leave them
+    # alone on both.
     case "$(board_name)" in
-    bcm2712,mm8108-usb) return 0 ;;
+    bcm2712,mm8108-usb|ghostnet,v1) return 0 ;;
     esac
 
     device=$(get_gpsd_device)
