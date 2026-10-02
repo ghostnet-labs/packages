@@ -1,8 +1,11 @@
 # INA219 battery/UPS monitor on the CM5 node (Waveshare UPS Module 3S).
 # The address is the module's documented default; confirm it on arrival
-# with `i2cdetect -y 1` and change it here if it differs.
+# with `i2cdetect -y <bus>` and change it here if it differs.
+# bus 'gpio' uses the bit-banged i2c-gpio adapter on GPIO22/27, because the
+# Waveshare bench carrier has no 40-pin header (GPIO2/3, i2c-1, are not
+# reachable). Set a bus number such as '1' on carriers that expose i2c-1.
 config ina219 'battery'
 	option enabled '1'
-	option bus '1'
+	option bus 'gpio'
 	option address '0x41'
 	option shunt_uohm '10000'

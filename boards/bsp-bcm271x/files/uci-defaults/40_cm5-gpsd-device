@@ -1,0 +1,19 @@
+#!/bin/sh
+
+# The Waveshare CM5 bench carrier has no 40-pin header, so its GNSS breakout
+# reaches the node through a CH340 USB-UART (/dev/ttyUSB0) instead of UART0.
+# PPS still arrives on GPIO18 (/dev/pps0).
+
+. /lib/functions.sh
+
+case "$(board_name)" in
+bcm2712,mm8108-usb) ;;
+*) exit 0 ;;
+esac
+
+[ "$(uci -q get gpsd.core.device)" = "/dev/ttyAMA0" ] || exit 0
+
+uci set gpsd.core.device='/dev/ttyUSB0'
+uci commit gpsd
+
+exit 0

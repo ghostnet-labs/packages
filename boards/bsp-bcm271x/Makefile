@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bsp-bcm271x
-PKG_RELEASE=8
+PKG_RELEASE=9
 PKG_VERSION:=1.0
 
 PKG_LICENSE:=GPLv2

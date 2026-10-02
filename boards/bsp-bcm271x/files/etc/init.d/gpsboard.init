@@ -9,6 +9,13 @@ GPIO_RST=25       # GPS_RST (active high pulse)
 GPIO_WAKE=12      # GPS_WAKE_UP (high = standby, low = active)
 
 boot() {
+    # The WM1302 reset/wake pins are not a GNSS module on the CM5 node: GPIO25
+    # is the CAN controller interrupt on the Waveshare bench carrier and GPIO12
+    # feeds its RS485 jumper. Leave them alone there.
+    case "$(board_name)" in
+    bcm2712,mm8108-usb) return 0 ;;
+    esac
+
     device=$(get_gpsd_device)
     if [ $? -ne 0 ] || [ -z "$device" ]; then
         logger -t "$NAME" "WARNING: GPS device not configured in /etc/config/gpsd"
