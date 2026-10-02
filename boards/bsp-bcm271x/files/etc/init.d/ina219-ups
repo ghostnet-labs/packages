@@ -4,9 +4,11 @@ START=15
 
 NAME=ina219-ups
 
-# Declare the UPS INA219 to the kernel so the ina2xx hwmon driver binds and
-# battery voltage/current appear under /sys/class/hwmon. The CM5 node has no
-# devicetree node for it, so it is instantiated from /etc/config/ups.
+# Declare the battery monitor to the kernel so its hwmon driver binds and
+# battery voltage/current appear under /sys/class/hwmon. The CM5 boards have
+# no devicetree node for it, so it is instantiated from /etc/config/ups:
+# an INA219 (ina2xx driver) on the CM5 bench node, an INA228 (ina238
+# driver) on the Ghostnet V1 carrier. Option 'chip' picks the device name.
 
 log() {
 	logger -t "$NAME" "$@"
@@ -27,7 +29,7 @@ gpio_bus() {
 
 boot() {
 	case "$(board_name)" in
-	bcm2712,mm8108-usb) ;;
+	bcm2712,mm8108-usb|ghostnet,v1) ;;
 	*) return 0 ;;
 	esac
 
@@ -35,11 +37,13 @@ boot() {
 }
 
 start() {
-	local enabled bus address shunt addr dev
+	local enabled chip bus address shunt addr dev
 
 	enabled=$(uci -q get ups.battery.enabled)
 	[ "$enabled" = "0" ] && return 0
 
+	chip=$(uci -q get ups.battery.chip)
+	chip=${chip:-ina219}
 	bus=$(uci -q get ups.battery.bus)
 	address=$(uci -q get ups.battery.address)
 	shunt=$(uci -q get ups.battery.shunt_uohm)
@@ -47,13 +51,13 @@ start() {
 
 	if [ "$bus" = "gpio" ]; then
 		bus=$(gpio_bus) || {
-			log "no i2c-gpio adapter, INA219 not configured"
+			log "no i2c-gpio adapter, $chip not configured"
 			return 0
 		}
 	fi
 
 	if [ ! -e "/sys/bus/i2c/devices/i2c-$bus/new_device" ]; then
-		log "i2c-$bus not present, INA219 not configured"
+		log "i2c-$bus not present, $chip not configured"
 		return 0
 	fi
 
@@ -61,8 +65,8 @@ start() {
 	dev="/sys/bus/i2c/devices/$bus-$addr"
 
 	if [ ! -e "$dev" ]; then
-		echo "ina219 $address" > "/sys/bus/i2c/devices/i2c-$bus/new_device" || {
-			log "failed to add ina219 at $address on i2c-$bus"
+		echo "$chip $address" > "/sys/bus/i2c/devices/i2c-$bus/new_device" || {
+			log "failed to add $chip at $address on i2c-$bus"
 			return 0
 		}
 	fi
@@ -73,5 +77,5 @@ start() {
 		done
 	fi
 
-	log "ina219 at $address on i2c-$bus"
+	log "$chip at $address on i2c-$bus"
 }
