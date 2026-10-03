@@ -1,0 +1,30 @@
+#!/bin/sh
+
+# The Ghostnet V1 carrier has node-side voice/PTT through an external
+# OpenVLM USB audio/PTT module on hub port 3 (docs D-023). openmanetd ships
+# comms disabled; turn it on for V1 with the OpenVLM control source, as
+# bsp-raven does. comms retries audio init while no OpenVLM is attached,
+# so this is safe on a node with the port empty.
+
+. /lib/functions.sh
+
+case "$(board_name)" in
+ghostnet,v1) ;;
+*) exit 0 ;;
+esac
+
+CONF=/etc/openmanetd/config.yml
+
+[ -f "$CONF" ] || exit 0
+
+# Only the first "enable:" under the top-level "comms:" key is changed;
+# gnss/blos keep their own values.
+awk '
+/^[^[:space:]#]/ { in_comms = ($0 ~ /^comms:/) }
+in_comms && !done && /^[[:space:]]+enable:[[:space:]]*false[[:space:]]*$/ {
+	sub(/false/, "true"); done = 1
+}
+{ print }
+' "$CONF" > "$CONF.tmp" && mv "$CONF.tmp" "$CONF"
+
+exit 0
