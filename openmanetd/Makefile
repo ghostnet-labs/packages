@@ -10,7 +10,7 @@ PKG_SOURCE_PROTO:=git
 # (bcm2712,mm8108-usb) and Ghostnet V1 (ghostnet,v1) board support and
 # dashboard battery status.
 PKG_SOURCE_URL:=https://github.com/ghostnet-labs/openmanetd
-PKG_SOURCE_VERSION:=34172a36dcb347c462e4df433d817dfb421f33ca
+PKG_SOURCE_VERSION:=0cf4d7dceeebe3d5695f3d6bac354e6c4a137e53
 PKG_HASH:=skip
 
 PKG_LICENSE:=MIT
