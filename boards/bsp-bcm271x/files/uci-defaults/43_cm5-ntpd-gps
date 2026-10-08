@@ -1,0 +1,16 @@
+#!/bin/sh
+
+# Feed the CM5 node's gpsd SHM segments (GNSS NMEA + GPIO18 PPS) into ntpd,
+# as bsp-raven does with its /etc/ntpd.d/gps.conf.
+
+. /lib/functions.sh
+
+case "$(board_name)" in
+bcm2712,mm8108-usb) ;;
+*) exit 0 ;;
+esac
+
+mkdir -p /etc/ntpd.d
+cp /usr/share/bsp-bcm271x/ntpd.d/gps.conf /etc/ntpd.d/gps.conf
+
+exit 0

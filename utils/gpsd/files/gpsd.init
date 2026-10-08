@@ -33,7 +33,10 @@ gpsd_instance()
 
 	[ "$listen_globally" -ne 0 ] && procd_append_param command -G
 	procd_append_param command -S "$port"
-	procd_append_param command "$device"
+	# device may list several space-separated sources, e.g. a GNSS tty
+	# plus a separate /dev/ppsN for a GPIO PPS line
+	# shellcheck disable=SC2086
+	procd_append_param command $device
 	# retry=0: respawn forever so gpsd recovers once the GPS UART is ready,
 	# instead of procd giving up after 5 attempts
 	procd_set_param respawn 3600 5 0
