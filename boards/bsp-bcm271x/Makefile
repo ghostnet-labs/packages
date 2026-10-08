@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bsp-bcm271x
-PKG_RELEASE=11
+PKG_RELEASE=12
 PKG_VERSION:=1.0
 
 PKG_LICENSE:=GPLv2
@@ -17,7 +17,7 @@ define Package/bsp-bcm271x
 	CATEGORY:=OpenMANET
 	SUBMENU:=Boards
 	TITLE:=OpenMANET BCM271x board support package
-	DEPENDS:=+bsp-common +kmod-fs-configfs +usbgadget +gpsd \
+	DEPENDS:=+bsp-common +kmod-fs-configfs +usbgadget +gpsd +ntpd \
 		+PACKAGE_libcamera-utils:libcamera-utils \
 		+PACKAGE_mediamtx:mediamtx \
 		+PACKAGE_camera-onvif-server:camera-onvif-server
@@ -56,6 +56,11 @@ define Package/bsp-bcm271x/install
 
 	$(INSTALL_DIR) $(1)/etc/sysctl.d/
 	$(INSTALL_DATA) ./files/etc/sysctl.d/* $(1)/etc/sysctl.d/
+
+	# Installed to /etc/ntpd.d/ on first boot by uci-defaults, only on
+	# boards whose GNSS PPS reaches gpsd (see 43_cm5-ntpd-gps).
+	$(INSTALL_DIR) $(1)/usr/share/bsp-bcm271x/ntpd.d/
+	$(INSTALL_DATA) ./files/usr/share/bsp-bcm271x/ntpd.d/* $(1)/usr/share/bsp-bcm271x/ntpd.d/
 endef
 
 define Package/bsp-bcm271x/postinst
