@@ -8,10 +8,11 @@ PKG_RELEASE:=11
 PKG_SOURCE_PROTO:=git
 # ghostnet-labs fork, main: release 1.3.10 plus the CM5 and Ghostnet V1
 # board support, MT7916 detection, battery status, the unified UI (setup
-# wizard handoff, LuCI proxy, configurable firmware-update source) and
+# wizard handoff, LuCI proxy, secure session cookie, configurable
+# firmware-update source) and
 # the V1 hardware manager.
 PKG_SOURCE_URL:=https://github.com/ghostnet-labs/openmanetd
-PKG_SOURCE_VERSION:=6535c30a069f561e0fd81053cbbbed648e748f05
+PKG_SOURCE_VERSION:=f6b07259f8ca0774b637b3559d06956267871d8f
 PKG_HASH:=skip
 
 PKG_LICENSE:=MIT
