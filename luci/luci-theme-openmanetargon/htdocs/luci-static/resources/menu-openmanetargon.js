@@ -23,6 +23,27 @@ const BASIC_MODE_MENU = new Set([
 	'Home', 'Wizards', 'Wizard', 'Upgrade', 'Help', 'Log out',
 ]);
 
+// Web storage can be missing or throw in restricted browsers: in-app
+// browsers / WebViews with DOM storage disabled expose `localStorage` as null
+// (TypeError on use), and blocked site data throws SecurityError on access.
+// An exception in __init__ stops this module from loading, which leaves the
+// page without its menu, so treat storage as best effort.
+function readStorage(key) {
+	try {
+		return window.localStorage.getItem(key);
+	} catch (e) {
+		return null;
+	}
+}
+
+function writeStorage(key, value) {
+	try {
+		window.localStorage.setItem(key, value);
+	} catch (e) {
+		// Not persisted; the mode still applies to this page.
+	}
+}
+
 function slideUp(target, duration = 500, cb) {
 	if (target.dataset.transitionTimeout) {
 		clearTimeout(target.dataset.transitionTimeout);
@@ -118,7 +139,7 @@ return baseclass.extend({
 
 		let uimode;
 		if (window.advancedModeToggle) {
-			uimode = localStorage.getItem('uimode');
+			uimode = readStorage('uimode');
 			if (!['normal', 'advanced'].includes(uimode)) {
 				uimode = 'normal';
 			}
@@ -138,7 +159,7 @@ return baseclass.extend({
 			newmode = 'advanced';
 		}
 		document.body.classList.add(`uimode-${newmode}`);
-		localStorage.setItem('uimode', newmode);
+		writeStorage('uimode', newmode);
 	},
 
 	attachLanguageHandlers() {
