@@ -1,0 +1,24 @@
+{
+	"admin/network/network": {
+		"action": {
+			"type": "view",
+			"path": "openmanet/managed-interfaces"
+		},
+		"depends": {
+			"acl": [ "luci-mod-network-config" ],
+			"fs": { "/www/luci-static/resources/view/network/interfaces.js": "file" }
+		}
+	},
+
+	"admin/network/wireless": {
+		"action": {
+			"type": "view",
+			"path": "openmanet/managed-wireless"
+		},
+		"depends": {
+			"acl": [ "luci-mod-network-config" ],
+			"fs": { "/www/luci-static/resources/view/network/wireless.js": "file" },
+			"uci": { "wireless": { "@wifi-device": true } }
+		}
+	}
+}
