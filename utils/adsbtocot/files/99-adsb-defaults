@@ -1,6 +1,19 @@
 #!/bin/sh
 # /etc/uci-defaults/99-adsb-defaults
-# Apply once on first boot
+# Receiver-ownership migration runs on every install; the rest applies once.
+
+# Receiver ownership (idempotent): dump1090 claims the 1090 MHz RTL-SDR by
+# USB serial "1090", never by index, so it cannot take the 978 MHz receiver
+# (serial "978", dump978-fa) or a scanner receiver. Only an unset or legacy
+# index-0 selection is migrated; any other value was set by the operator and
+# is kept.
+case "$(uci -q get dump1090.main.device_index)" in
+'' | 0)
+	uci -q set dump1090.main.device_index='1090'
+	uci -q commit dump1090
+	;;
+esac
+
 [ -f /etc/adsbcot/.defaults_applied ] && exit 0
 
 # Ensure dump1090 JSON path exists
@@ -12,7 +25,8 @@ set dump1090.main.enabled='1'
 set dump1090.main.disabled='0'
 
 # SDR + decoding
-set dump1090.main.device_index='0'
+# RTL-SDR USB serial (rtl_eeprom -s 1090); dump1090 matches it as a serial.
+set dump1090.main.device_index='1090'
 set dump1090.main.gain='49.6'
 set dump1090.main.no_fix='0'
 set dump1090.main.fix='1'
