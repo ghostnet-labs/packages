@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=openmanetd
 
 PKG_VERSION:=1.3.10
-PKG_RELEASE:=8
+PKG_RELEASE:=9
 
 PKG_SOURCE_PROTO:=git
 # ghostnet-labs fork, branch ekh-1.3.10: release 1.3.10 plus CM5
@@ -86,6 +86,22 @@ define Package/openmanetd/install
 	$(INSTALL_BIN) $(CURDIR)/files/openmanetd.init $(1)/etc/init.d/openmanetd
 	$(INSTALL_DIR) $(1)/etc/sysctl.d/
 	$(INSTALL_DATA) $(CURDIR)/files/20-openmanetd-net.conf $(1)/etc/sysctl.d/20-openmanetd-net.conf
+
+	# LuCI: warn on the settings openmanetd owns and may overwrite (GHO-74).
+	# The menu.d entry repoints the stock Interfaces and Wireless pages at
+	# thin wrappers that load the unmodified luci-mod-network views; it is
+	# inert when luci-mod-network is not installed.
+	$(INSTALL_DIR) $(1)/www/luci-static/resources/tools/openmanet
+	$(INSTALL_DATA) $(CURDIR)/files/luci/htdocs/luci-static/resources/tools/openmanet/managed.js \
+		$(1)/www/luci-static/resources/tools/openmanet/managed.js
+	$(INSTALL_DIR) $(1)/www/luci-static/resources/view/openmanet
+	$(INSTALL_DATA) $(CURDIR)/files/luci/htdocs/luci-static/resources/view/openmanet/managed-interfaces.js \
+		$(1)/www/luci-static/resources/view/openmanet/managed-interfaces.js
+	$(INSTALL_DATA) $(CURDIR)/files/luci/htdocs/luci-static/resources/view/openmanet/managed-wireless.js \
+		$(1)/www/luci-static/resources/view/openmanet/managed-wireless.js
+	$(INSTALL_DIR) $(1)/usr/share/luci/menu.d
+	$(INSTALL_DATA) $(CURDIR)/files/luci/root/usr/share/luci/menu.d/luci-openmanetd-managed.json \
+		$(1)/usr/share/luci/menu.d/luci-openmanetd-managed.json
 endef
 
 $(eval $(call GoBinPackage,openmanetd))
