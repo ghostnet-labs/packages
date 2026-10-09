@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=openmanetd
 
 PKG_VERSION:=1.3.10
-PKG_RELEASE:=9
+PKG_RELEASE:=10
 
 PKG_SOURCE_PROTO:=git
 # ghostnet-labs fork, branch ekh-1.3.10: release 1.3.10 plus CM5
@@ -86,6 +86,11 @@ define Package/openmanetd/install
 	$(INSTALL_BIN) $(CURDIR)/files/openmanetd.init $(1)/etc/init.d/openmanetd
 	$(INSTALL_DIR) $(1)/etc/sysctl.d/
 	$(INSTALL_DATA) $(CURDIR)/files/20-openmanetd-net.conf $(1)/etc/sysctl.d/20-openmanetd-net.conf
+
+	# GHO-80: give configs kept across a sysupgrade the sysupgrade block
+	# (releasesRepo ghostnet-labs/firmware) when they have none.
+	$(INSTALL_DIR) $(1)/etc/uci-defaults/
+	$(INSTALL_BIN) $(CURDIR)/files/openmanetd.uci-defaults $(1)/etc/uci-defaults/90-openmanetd-sysupgrade-repo
 
 	# LuCI: warn on the settings openmanetd owns and may overwrite (GHO-74).
 	# The menu.d entry repoints the stock Interfaces and Wireless pages at

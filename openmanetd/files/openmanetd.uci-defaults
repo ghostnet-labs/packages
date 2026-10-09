@@ -1,0 +1,29 @@
+#!/bin/sh
+
+# GHO-80 (decision D-039): firmware update checks follow
+# ghostnet-labs/firmware. /etc/openmanetd/ is a conffile directory, so a
+# sysupgrade that keeps settings keeps the node's old config.yml, which has
+# no sysupgrade block; openmanetd would then fall back to its compiled-in
+# default repository. Add the block only when the file has no top-level
+# sysupgrade key, so a node that already chose a repository (or turned the
+# online check off) is left alone. Nothing else in config.yml is changed:
+# in particular setup.enabled is not added, so configured nodes do not
+# re-open the first-boot wizard.
+
+cfg=/etc/openmanetd/config.yml
+
+[ -f "$cfg" ] || exit 0
+grep -q '^sysupgrade:' "$cfg" && exit 0
+
+# Make sure the appended block starts on its own line.
+[ -n "$(tail -c 1 "$cfg")" ] && echo >> "$cfg"
+
+cat >> "$cfg" <<'EOT'
+# Firmware update (sysupgrade), added on upgrade (GHO-80). onlineCheck:
+# false disables the GitHub release lookup. Read at startup only.
+sysupgrade:
+  releasesRepo: ghostnet-labs/firmware
+  onlineCheck: true
+EOT
+
+exit 0
