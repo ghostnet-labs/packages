@@ -1,0 +1,152 @@
+name: Build packages
+
+# Compiles every package a pull request changes with the OpenWrt SDK for the
+# release the firmware builds on, using the firmware's pinned feeds, so a
+# broken Makefile, patch or source pin fails here instead of in a firmware
+# image build. bcm2712 (aarch64) and mt7621 (mipsel) cover both CPU families
+# the boards ship on.
+
+on:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      packages:
+        description: 'Package directories to build, space separated (e.g. openmanetd boards/bsp-bcm271x)'
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  OPENWRT_VERSION: 24.10.5
+  FIRMWARE_REPO: ghostnet-labs/firmware
+  FIRMWARE_REF: '24.10'
+
+jobs:
+  changes:
+    name: Find changed packages
+    runs-on: ubuntu-latest
+    outputs:
+      packages: ${{ steps.find.outputs.packages }}
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          fetch-depth: 0
+      - name: List package directories touched by this change
+        id: find
+        env:
+          BASE_SHA: ${{ github.event.pull_request.base.sha }}
+          HEAD_SHA: ${{ github.event.pull_request.head.sha }}
+          MANUAL: ${{ inputs.packages }}
+        run: |
+          if [ "$GITHUB_EVENT_NAME" = workflow_dispatch ]; then
+            dirs=$MANUAL
+          else
+            dirs=$(git diff --name-only "$BASE_SHA...$HEAD_SHA" | while read -r f; do
+              # Walk up from each changed file to the nearest package Makefile.
+              d=$(dirname "$f")
+              while [ "$d" != . ] && [ ! -f "$d/Makefile" ]; do d=$(dirname "$d"); done
+              [ "$d" != . ] && [ -f "$d/Makefile" ] && echo "$d"
+            done | sort -u | tr '\n' ' ')
+            # A change to this workflow builds a canary package to prove it.
+            if git diff --name-only "$BASE_SHA...$HEAD_SHA" | grep -qx '.github/workflows/build-packages.yml'; then
+              dirs="$dirs boards/bsp-common"
+            fi
+          fi
+          echo "Changed packages: ${dirs:-none}"
+          echo "packages=$dirs" >>"$GITHUB_OUTPUT"
+
+  build:
+    name: Build (${{ matrix.target }}/${{ matrix.subtarget }})
+    needs: changes
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: bcm27xx
+            subtarget: bcm2712
+          - target: ramips
+            subtarget: mt7621
+    env:
+      PACKAGES: ${{ needs.changes.outputs.packages }}
+    steps:
+      - name: Skip when no package changed
+        if: env.PACKAGES == ''
+        run: echo "This change touches no package directory; nothing to compile."
+
+      - uses: actions/checkout@v6
+        if: env.PACKAGES != ''
+        with:
+          path: feed
+
+      - name: Install SDK host dependencies
+        if: env.PACKAGES != ''
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential clang flex gawk gettext git \
+            libncurses-dev libssl-dev python3-setuptools rsync unzip zlib1g-dev \
+            file wget zstd swig
+
+      - name: Download and verify the OpenWrt SDK
+        if: env.PACKAGES != ''
+        env:
+          TARGET: ${{ matrix.target }}
+          SUBTARGET: ${{ matrix.subtarget }}
+        run: |
+          base="https://downloads.openwrt.org/releases/$OPENWRT_VERSION/targets/$TARGET/$SUBTARGET"
+          # The OpenWrt CDN cuts long transfers off; resume and retry.
+          fetch() { wget -q --tries=10 --waitretry=5 --retry-connrefused --continue "$1"; }
+          fetch "$base/sha256sums"
+          sdk=$(grep -oE 'openwrt-sdk-[^ ]+\.tar\.zst' sha256sums)
+          fetch "$base/$sdk"
+          grep " \*$sdk\$" sha256sums | sha256sum -c -
+          mkdir sdk
+          tar --zstd -xf "$sdk" -C sdk --strip-components=1
+          rm "$sdk"
+
+      - name: Use the firmware's pinned feeds with this checkout as openmanet
+        if: env.PACKAGES != ''
+        working-directory: sdk
+        run: |
+          curl -sSfL --retry 5 -o firmware-feeds.conf \
+            "https://raw.githubusercontent.com/$FIRMWARE_REPO/$FIRMWARE_REF/feeds.conf.default"
+          # Keep the SDK's base feed, take every other feed from the firmware,
+          # and point openmanet at the pull request's code.
+          {
+            grep -E '^src-[a-z-]+ base ' feeds.conf.default | sed 's/^src-git-full /src-git /'
+            grep -vE '^src-[a-z-]+ openmanet |^[[:space:]]*(#|$)' firmware-feeds.conf
+            echo "src-link openmanet $GITHUB_WORKSPACE/feed"
+          } >feeds.conf
+          cat feeds.conf
+          ./scripts/feeds update -a
+          ./scripts/feeds install -a -f -p openmanet
+          ./scripts/feeds install -a
+          make defconfig
+          sed -i 's/^CONFIG_SIGNED_PACKAGES=y/# CONFIG_SIGNED_PACKAGES is not set/' .config
+
+      - name: Compile changed packages
+        if: env.PACKAGES != ''
+        working-directory: sdk
+        run: |
+          failed=
+          for dir in $PACKAGES; do
+            name=$(basename "$dir")
+            echo "::group::$dir"
+            if ! make "package/$name/compile" -j"$(nproc)" V=s; then
+              # Rerun serially so the first real error ends the log.
+              make "package/$name/compile" -j1 V=s || failed="$failed $dir"
+            fi
+            echo "::endgroup::"
+          done
+          if [ -n "$failed" ]; then
+            echo "::error::Failed to compile:$failed"
+            exit 1
+          fi
+          find bin/packages -path '*/openmanet/*' -name '*.ipk' -printf '%f\n' | sort
