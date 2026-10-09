@@ -55,6 +55,12 @@
 					<input type="submit" value="<%:Log in%>" class="cbi-button cbi-button-apply" />
 				</div>
 			</form>
+			<%# href is rewritten by om-return.js (loaded from the header); see the rule there. %>
+			<a class="om-return" data-om-return href="/" aria-label="<%:Back to OpenMANET UI%>">
+				<span aria-hidden="true">&larr;</span>
+				<span class="om-return-long"><%:Back to OpenMANET%></span>
+				<span class="om-return-short"><%:OpenMANET%></span>
+			</a>
 			<script type="text/javascript">//<![CDATA[
 				let passwordInputs = document.querySelectorAll('.cbi-input-password');
 				passwordInputs.forEach(function(input) {

@@ -96,11 +96,12 @@
 	<link rel="apple-touch-icon" href="<%=media%>/icon/favicon-180x180.png">
 	<link rel="icon" type="image/png" sizes="192x192" href="<%=media%>/icon/logo-small.png">
 	<link rel="icon" type="image/png" sizes="32x32" href="<%=media%>/icon/favicon-32x32.png">
-	<meta name="theme-color" content="#5e72e4">
+	<meta name="theme-color" content="#05080a">
 	<link rel="stylesheet" href="<%=media%>/css/normalize.8.0.1.min.css">
 	<link rel="stylesheet" href="<%=media%>/icon/icons.css">
 	<link rel="stylesheet" href="<%=media%>/css/cascade.css">
 	<link rel="stylesheet" href="<%=media%>/css/dark.css">
+	<link rel="stylesheet" href="<%=media%>/css/openmanet.css">
 	<% if node and node.css then %>
 	<link rel="stylesheet" href="<%=resource%>/<%=node.css%>">
 	<% end -%>
@@ -110,6 +111,7 @@
 	<script src="<%=url('admin/translations', luci.i18n.context.lang)%><%# ?v=PKG_VERSION %>"></script>
 	<script src="<%=resource%>/luci.js"></script>
 	<script src="<%=resource%>/cbi.js"></script>
+	<script src="<%=media%>/js/om-return.js" defer></script>
 	<script>
 		window.advancedModeToggle = <% if advanced_mode_toggle then %>true<% else %>false<% end %>;
 	</script>
@@ -170,6 +172,7 @@
 							<div class="flex1">
 								<a class="showSide"></a>
 								<a class="brand" href="#"></a>
+								<span class="om-device" title="<%:Device%>"><%=pcdata(boardinfo.hostname or "?")%></span>
 							</div>
 							<div class="status" id="indicators"></div>
 							<% if morse_dev then %>
@@ -193,6 +196,12 @@
 								<% end %>
 							</div>
 							<% end %>
+							<%# href is rewritten by om-return.js; see the rule there. %>
+							<a class="om-return" data-om-return href="/" aria-label="<%:Back to OpenMANET UI%>">
+								<span aria-hidden="true">&larr;</span>
+								<span class="om-return-long"><%:Back to OpenMANET%></span>
+								<span class="om-return-short"><%:OpenMANET%></span>
+							</a>
 						</div>
 				</div>
 			</header>

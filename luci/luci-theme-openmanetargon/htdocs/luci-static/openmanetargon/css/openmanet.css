@@ -1,0 +1,132 @@
+/*
+ * OpenMANET alignment layer (GHO-73, unified UI design D-037).
+ *
+ * Loaded after cascade.css and dark.css. It maps the theme's header variables
+ * onto the OpenMANET UI's Lattice tokens (near-black surfaces, one cyan
+ * accent, monospace labels, sharp corners) and styles the header's device
+ * label and "Back to OpenMANET" control. LuCI widgets, forms, save/apply
+ * dialogs and error pages are deliberately left alone.
+ */
+
+:root {
+  /* Lattice tokens, copied from openmanetd frontend/src/styles/lattice.css. */
+  --om-bg: #05080a;
+  --om-surface: #0a0f13;
+  --om-border: rgb(0 229 255 / 14%);
+  --om-border-hi: rgb(0 229 255 / 38%);
+  --om-text: #d9e6ed;
+  --om-accent: #00e5ff;
+  --om-accent-glow: rgb(0 229 255 / 8%);
+  --om-font-mono: ui-monospace, sfmono-regular, menlo, consolas, monospace;
+
+  /* Theme variables the header reads. */
+  --header-bg: var(--om-bg);
+  --header-color: var(--om-text);
+}
+
+/* dark.css forces #1e1e1e with !important; override it with the Lattice surface. */
+header.bg-primary {
+  background-color: var(--header-bg) !important;
+  border-bottom: 1px solid var(--om-border);
+}
+
+/* Let the left header group shrink so a long hostname ellipsizes instead of
+ * pushing the return control off a narrow screen. */
+header > .fill > .container > .flex1 {
+  min-width: 0;
+  overflow: hidden;
+}
+
+/* Device context: the node's hostname next to the branding. */
+.om-device {
+  display: inline-block;
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  vertical-align: middle;
+  padding-left: 0.75rem;
+  font-family: var(--om-font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--om-text);
+}
+
+/* "Back to OpenMANET" control. */
+.om-return {
+  display: inline-flex;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  min-height: 2rem;
+  margin-left: 0.5rem;
+  padding: 0 0.75rem;
+  border: 1px solid var(--om-border-hi);
+  border-radius: 0;
+  background: transparent;
+  color: var(--om-accent);
+  font-family: var(--om-font-mono);
+  font-size: 0.75rem;
+  letter-spacing: 0.12em;
+  line-height: 1;
+  text-decoration: none;
+  text-transform: uppercase;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.om-return:hover {
+  background: var(--om-accent-glow);
+  color: var(--om-accent);
+  text-decoration: none;
+}
+
+.om-return:visited,
+.om-return:active {
+  color: var(--om-accent);
+}
+
+.om-return:focus-visible {
+  outline: 2px solid var(--om-accent);
+  outline-offset: 2px;
+}
+
+.om-return-short {
+  display: none;
+}
+
+/* On the login page the control sits under the sign-in form. */
+.login-form .om-return {
+  min-height: 44px;
+  margin: 1.5rem 0 0;
+  background: var(--om-bg);
+}
+
+/* Mobile: the theme switches to the off-canvas menu at 768px. */
+@media screen and (width <= 768px) {
+  .om-return {
+    min-width: 44px;
+    min-height: 44px;
+    /* Grow past the 2rem header row without making the header taller. */
+    margin-top: -4px;
+    margin-bottom: -4px;
+  }
+
+  .om-return-long {
+    display: none;
+  }
+
+  .om-return-short {
+    display: inline;
+  }
+
+  /* The login page has room for the full label. */
+  .login-form .om-return .om-return-long {
+    display: inline;
+  }
+
+  .login-form .om-return .om-return-short {
+    display: none;
+  }
+}
