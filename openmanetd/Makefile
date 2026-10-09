@@ -3,14 +3,16 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=openmanetd
 
 PKG_VERSION:=1.3.10
-PKG_RELEASE:=9
+PKG_RELEASE:=11
 
 PKG_SOURCE_PROTO:=git
-# ghostnet-labs fork, branch ekh-1.3.10: release 1.3.10 plus CM5
-# (bcm2712,mm8108-usb) and Ghostnet V1 (ghostnet,v1) board support and
-# dashboard battery status, plus MT7916 detection by driver/PCI ID.
+# ghostnet-labs fork, main: release 1.3.10 plus the CM5 and Ghostnet V1
+# board support, MT7916 detection, battery status, the unified UI (setup
+# wizard handoff, LuCI proxy, secure session cookie, configurable
+# firmware-update source) and
+# the V1 hardware manager.
 PKG_SOURCE_URL:=https://github.com/ghostnet-labs/openmanetd
-PKG_SOURCE_VERSION:=f8751dac1d9907dc36e9cd92248a32a89d198789
+PKG_SOURCE_VERSION:=f6b07259f8ca0774b637b3559d06956267871d8f
 PKG_HASH:=skip
 
 PKG_LICENSE:=MIT
@@ -86,6 +88,11 @@ define Package/openmanetd/install
 	$(INSTALL_BIN) $(CURDIR)/files/openmanetd.init $(1)/etc/init.d/openmanetd
 	$(INSTALL_DIR) $(1)/etc/sysctl.d/
 	$(INSTALL_DATA) $(CURDIR)/files/20-openmanetd-net.conf $(1)/etc/sysctl.d/20-openmanetd-net.conf
+
+	# GHO-80: give configs kept across a sysupgrade the sysupgrade block
+	# (releasesRepo ghostnet-labs/firmware) when they have none.
+	$(INSTALL_DIR) $(1)/etc/uci-defaults/
+	$(INSTALL_BIN) $(CURDIR)/files/openmanetd.uci-defaults $(1)/etc/uci-defaults/90-openmanetd-sysupgrade-repo
 
 	# LuCI: warn on the settings openmanetd owns and may overwrite (GHO-74).
 	# The menu.d entry repoints the stock Interfaces and Wireless pages at

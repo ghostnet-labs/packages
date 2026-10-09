@@ -1,13 +1,40 @@
 #!/bin/sh
 
-# wizard.js and configpage.js both store luci.wizard.used='1'/'0' respectively.
-# All I'm looking for in this test is that the user has configured the device at all.
-# Rather than setting a "defaults_applied" field as we would normally have done
-# We're instead looking for the existence of this new section created by the pages.
-# This won't catch configuration made by Network --> Wireless, or no configuration made
-# at all.
-uci -q get luci.wizard &>/dev/null && exit 0
+# GHO-80 (decision D-038): first boot now lands in the OpenMANET setup
+# wizard served by openmanetd, so this legacy Morse Micro wizard no longer
+# claims the LuCI homepage and its "Wizards" menu entry is opt-in.
+#
+# luci.wizard.legacy gates the "Wizards" menu entry (see
+# /usr/share/luci/menu.d/luci-app-ekhwizards.json). It is '1' to show the
+# legacy wizards and '0' (or unset) to hide them. The wizard pages stay
+# installed and reachable by direct link (admin/selectwizard, used by the
+# home page "Change mode via wizard" link); only the menu entry and the
+# first-boot redirect are gone.
+#
+# Turn the legacy wizards back on:
+#   uci set luci.wizard.legacy='1'; uci commit luci
+# Optionally make the legacy landing page the LuCI homepage again:
+#   uci set luci.main.homepage='admin/morse/landing'; uci commit luci
+# Turn them off again:
+#   uci set luci.wizard.legacy='0'; uci delete luci.main.homepage; uci commit luci
+#
+# wizard.js and configpage.js store luci.wizard.used='1'/'0', and earlier
+# releases of this script created the luci.wizard section on first boot, so
+# an existing luci.wizard section means the node predates GHO-80 (or was set
+# up through the legacy wizard). Such nodes keep the legacy wizards exactly
+# as before: only an unset luci.wizard.legacy is filled in, and the
+# homepage is never touched.
+if uci -q get luci.wizard >/dev/null; then
+	[ -n "$(uci -q get luci.wizard.legacy)" ] && exit 0
+	uci set luci.wizard.legacy='1'
+	uci commit luci
+	exit 0
+fi
 
-uci set luci.main.homepage='admin/morse/landing'
+# Fresh install: create the section (the wizard pages and the OpenMANET
+# setup wizard both write luci.wizard.used into it) with the legacy
+# wizards hidden. No homepage redirect.
 uci set luci.wizard='wizard'
+uci set luci.wizard.legacy='0'
 uci commit luci
+exit 0

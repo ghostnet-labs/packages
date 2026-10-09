@@ -12,17 +12,20 @@
         "order": 3,
         "action": {
             "type": "template",
-            "path": "morse/selectwizard",
+            "path": "morse/selectwizard"
         },
         "depends": {
-            "uci": { "wireless": { "@wifi-device": true } }
+            "uci": {
+                "wireless": { "@wifi-device": true },
+                "luci": { "wizard": { "legacy": "1" } }
+            }
         }
     },
 
     "admin/selectwizard": {
         "action": {
-            "type": "alias",
-            "path": "admin/ekhwizards"
+            "type": "template",
+            "path": "morse/selectwizard"
         },
         "depends": {
             "uci": { "wireless": { "@wifi-device": true } }
@@ -33,7 +36,7 @@
         "order": 90,
         "action": {
             "type": "template",
-            "path": "morse/wizard",
+            "path": "morse/wizard"
         },
         "depends": {
             "uci": { "wireless": { "@wifi-device": true } }
@@ -44,7 +47,7 @@
         "order": 91,
         "action": {
             "type": "template",
-            "path": "morse/meshwizard",
+            "path": "morse/meshwizard"
         },
         "depends": {
             "uci": { "wireless": { "@wifi-device": true } }
@@ -55,7 +58,7 @@
         "order": 92,
         "action": {
             "type": "template",
-            "path": "morse/easymeshwizard",
+            "path": "morse/easymeshwizard"
         },
         "depends": {
             "uci": { "wireless": { "@wifi-device": true } }
@@ -66,7 +69,7 @@
         "order": 92,
         "action": {
             "type": "template",
-            "path": "morse/matterwizard",
+            "path": "morse/matterwizard"
         },
         "depends": {
             "uci": { "wireless": { "@wifi-device": true } }
