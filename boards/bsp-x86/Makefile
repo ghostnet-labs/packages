@@ -17,15 +17,14 @@ define Package/bsp-x86
 	CATEGORY:=OpenMANET
 	SUBMENU:=Boards
 	TITLE:=OpenMANET x86 board support package
-	DEPENDS:=+bsp-common +gpsd +ntpd +kmod-pps-ldisc +kmod-usb-hid-mcp2221 \
-		+kmod-hwmon-ina2xx
+	DEPENDS:=+bsp-common +gpsd +ntpd +kmod-pps-ldisc +kmod-usb-hid-mcp2221
 endef
 
 define Package/bsp-x86/description
 Board support for OpenMANET nodes built on x86_64 boxes. Today that is the
 Protectli Vault Pro VP2430 bench node: GNSS NMEA and PPS on the RS-232 COM
-port (/dev/ttyS1, PPS on DCD through the pps-ldisc line discipline) feeding
-ntpd, and an INA260 battery monitor on an MCP2221A USB-I2C bridge. Every
+header (/dev/ttyS1, PPS on DCD through the pps-ldisc line discipline) feeding
+ntpd, and an INA228 battery monitor on an MCP2221A USB-I2C bridge. Every
 script checks the board name, so the package is inert on other x86 hardware.
 endef
 
