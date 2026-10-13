@@ -13,7 +13,7 @@ concurrency:
 jobs:
   gate:
     name: Manet merge gate
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64]
     timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
