@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=openmanetd
 
 PKG_VERSION:=1.3.10
-PKG_RELEASE:=12
+PKG_RELEASE:=13
 
 PKG_SOURCE_PROTO:=git
 # ghostnet-labs fork, main: release 1.3.10 plus the CM5 and Ghostnet V1
@@ -56,8 +56,12 @@ Includes:
 endef
 
 define Build/Configure
-	# Compile Alfred Bindings
-	$(MAKE) -C $(PKG_BUILD_DIR)/internal/alfred/alfred
+	# Compile Alfred Bindings with the target toolchain and libnl-tiny, the
+	# same libraries the alfred package uses. Without them make picks the
+	# host compiler and libnl-3, which an SDK build does not have.
+	$(TARGET_CONFIGURE_OPTS) LIBNL_NAME="libnl-tiny" LIBNL_GENL_NAME="libnl-tiny" \
+		CONFIG_ALFRED_CAPABILITIES=n CONFIG_ALFRED_VIS=n CONFIG_ALFRED_GPSD=n \
+		$(MAKE) -C $(PKG_BUILD_DIR)/internal/alfred/alfred
 
 	$(call GoPackage/Build/Configure,$(1))
 	$(call Build/Configure/Default,$(1))
