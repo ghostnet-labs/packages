@@ -22,7 +22,9 @@ concurrency:
 jobs:
   merge:
     name: Handle passing PRs
-    runs-on: ubuntu-latest
+    # Runs pinned docs-repo code, never PR code. Fork-triggered
+    # pull_request_target events still use hosted runners.
+    runs-on: ${{ (github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted","macOS","ARM64"]') || 'ubuntu-latest' }}
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
