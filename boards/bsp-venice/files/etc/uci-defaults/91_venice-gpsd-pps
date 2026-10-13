@@ -1,0 +1,31 @@
+#!/bin/sh
+
+# Images before bsp-venice 1.0-4 configured gpsd with /dev/ttymxc0 only, so
+# the GNSS PPS on /dev/pps0 never reached gpsd and ntpd's PPS source stayed
+# empty. sysupgrade keeps /etc/config/gpsd, so move those installs to the
+# new default. Only boards whose device tree has the on-board GNSS pps-gpio
+# node are touched, and only when the device was never customised.
+
+. /lib/functions.sh
+
+case "$(board_name)" in
+gw,imx8mm-gw71xx-0x|\
+gateworks,imx8mp-gw71xx-2x|\
+gw,imx8mm-gw72xx-0x|\
+gateworks,imx8mp-gw72xx-2x|\
+gw,imx8mm-gw73xx-0x|\
+gateworks,imx8mp-gw73xx-2x|\
+gateworks,imx8mp-gw74xx|\
+gateworks,imx8mm-gw75xx-0x|\
+gateworks,imx8mp-gw75xx-2x|\
+gw,imx8mm-gw7902|\
+gw,imx8mn-gw7902) ;;
+*) exit 0 ;;
+esac
+
+[ "$(uci -q get gpsd.core.device)" = "/dev/ttymxc0" ] || exit 0
+
+uci set gpsd.core.device='/dev/pps0 /dev/ttymxc0'
+uci commit gpsd
+
+exit 0
