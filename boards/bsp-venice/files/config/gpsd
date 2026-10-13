@@ -1,5 +1,10 @@
 config gpsd 'core'
         option enabled '1'
-        option device '/dev/ttymxc0'
+        # GNSS PPS reaches the CPU on a GPIO (pps-gpio, /dev/pps0), not on
+        # the UART's DCD line, so gpsd only uses it when it is listed as its
+        # own source. /dev/pps0 goes first so it takes SHM(0) (see
+        # /etc/ntpd.d/gps.conf). Needs the firmware's gpsd init fix that
+        # passes each device as a separate argument.
+        option device '/dev/pps0 /dev/ttymxc0'
         option port '2947'
         option listen_globally '0'

@@ -1,0 +1,71 @@
+#!/bin/sh /etc/rc.common
+# dump978-fa (978 MHz UAT) with optional skyaware978 aircraft.json writer.
+# The receiver is selected by RTL-SDR USB serial only; see /etc/config/dump978-fa.
+
+START=91
+STOP=10
+USE_PROCD=1
+
+PROG=/usr/bin/dump978-fa
+SKYAWARE=/usr/bin/skyaware978
+
+start_service() {
+	local enabled serial gain ppm raw_port json_port skyaware json_dir
+
+	config_load dump978-fa
+	config_get_bool enabled main enabled 0
+	[ "$enabled" = 1 ] || return 0
+
+	config_get serial main serial ''
+	config_get gain main gain ''
+	config_get ppm main ppm ''
+	config_get raw_port main raw_port '127.0.0.1:30978'
+	config_get json_port main json_port ''
+	config_get_bool skyaware main skyaware 1
+	config_get json_dir main json_dir '/var/run/skyaware978'
+
+	# Never fall back to "first RTL-SDR found": that could claim the 1090
+	# receiver or a scanner's receiver.
+	case "$serial" in
+	'' | *[!A-Za-z0-9_-]*)
+		logger -t dump978-fa "invalid or empty receiver serial '$serial'; not starting"
+		return 1
+		;;
+	esac
+
+	procd_open_instance dump978
+	procd_set_param command "$PROG" --sdr "driver=rtlsdr,serial=$serial"
+	case "$gain" in
+	'') ;;
+	auto) procd_append_param command --sdr-auto-gain ;;
+	*) procd_append_param command --sdr-gain "$gain" ;;
+	esac
+	[ -n "$ppm" ] && procd_append_param command --sdr-ppm "$ppm"
+	[ -n "$raw_port" ] && procd_append_param command --raw-port "$raw_port"
+	[ -n "$json_port" ] && procd_append_param command --json-port "$json_port"
+	# Keep retrying every 30 s so a receiver plugged in later is picked up.
+	procd_set_param respawn 3600 30 0
+	procd_set_param stdout 1
+	procd_set_param stderr 1
+	procd_close_instance
+
+	[ "$skyaware" = 1 ] && [ -n "$raw_port" ] || return 0
+
+	mkdir -p "$json_dir"
+	# history-count must be at least 1 (upstream divides by it); one file
+	# keeps tmpfs use small.
+	procd_open_instance skyaware978
+	procd_set_param command "$SKYAWARE" \
+		--connect "$raw_port" \
+		--reconnect-interval 30 \
+		--json-dir "$json_dir" \
+		--history-count 1
+	procd_set_param respawn 3600 30 0
+	procd_set_param stdout 1
+	procd_set_param stderr 1
+	procd_close_instance
+}
+
+service_triggers() {
+	procd_add_reload_trigger dump978-fa
+}
