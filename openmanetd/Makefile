@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=openmanetd
 
 PKG_VERSION:=1.3.10
-PKG_RELEASE:=13
+PKG_RELEASE:=14
 
 PKG_SOURCE_PROTO:=git
 # ghostnet-labs fork, main: release 1.3.10 plus the CM5 and Ghostnet V1
@@ -12,7 +12,7 @@ PKG_SOURCE_PROTO:=git
 # firmware-update source) and
 # the V1 hardware manager.
 PKG_SOURCE_URL:=https://github.com/ghostnet-labs/openmanetd
-PKG_SOURCE_VERSION:=c5e8dcfb9a8ee66372c33c652a6da308cc11be0b
+PKG_SOURCE_VERSION:=c635c9149c816dedacd8be4ab29ae7401f33276c
 PKG_HASH:=skip
 
 PKG_LICENSE:=MIT
