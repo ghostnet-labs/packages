@@ -24,8 +24,13 @@ PKG_BUILD_PARALLEL:=1
 include $(INCLUDE_DIR)/kernel.mk
 include $(INCLUDE_DIR)/package.mk
 
-# Extract mac80211 version
-MAC80211_VERSION:=v$(shell grep '^PKG_VERSION:=' $(TOPDIR)/package/kernel/mac80211/Makefile | cut -d'=' -f2 | head -1)
+# Extract mac80211 version. A firmware tree carries mac80211 in package/; the
+# OpenWrt SDK only has it in the base feed. Without a version the driver
+# treats mac80211 as older than 5.10 and redefines its S1G types.
+MAC80211_MAKEFILE:=$(firstword $(wildcard \
+	$(TOPDIR)/package/kernel/mac80211/Makefile \
+	$(TOPDIR)/feeds/base/package/kernel/mac80211/Makefile))
+MAC80211_VERSION:=v$(shell grep '^PKG_VERSION:=' $(MAC80211_MAKEFILE) | cut -d'=' -f2 | head -1)
 MORSE_VERSION:=$(PKG_VERSION)-g$(call version_abbrev,$(PKG_SOURCE_VERSION))
 
 define KernelPackage/dot11ah

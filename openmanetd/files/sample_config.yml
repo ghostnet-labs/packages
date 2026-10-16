@@ -20,3 +20,31 @@ comms:
   # - web: Use a web-based interface for PTT control.
   controlSource: openvlm
 
+# First-boot setup wizard (GHO-80, decision D-038). With enabled: true and
+# complete unset/false, the OpenMANET web UI (https://<node>:8081) opens the
+# setup wizard on first boot; the wizard sets complete: true when it applies
+# a profile. A config.yml kept across a sysupgrade keeps its own setup
+# values. To re-open the wizard later, run `openmanetd setup-reset`.
+setup:
+  enabled: true
+# Firmware update (sysupgrade, decision D-039). releasesRepo is the GitHub
+# "owner/name" repository whose releases feed the online update check and
+# downloads. onlineCheck: false disables every GitHub release lookup; manual
+# image upload keeps working. Both keys are read at startup — restart the
+# daemon after changing them.
+sysupgrade:
+  releasesRepo: ghostnet-labs/firmware
+  onlineCheck: true
+frontend:
+  # Unified UI pilot (GHO-80, decision D-037), opt-in. With enable: true the
+  # OpenMANET web server reverse-proxies LuCI on its own origin
+  # (https://<node>:8081/cgi-bin/luci/) and shows an "Advanced" entry in the
+  # OpenMANET navigation. LuCI keeps its own login, and uhttpd stays on :80
+  # as the direct route either way.
+  # Turn on:  set enable: true. openmanetd re-reads it when the file
+  #           changes (or run /etc/init.d/openmanetd restart); then reload
+  #           the browser page.
+  # Turn off: set enable: false (or delete luciProxy) the same way. LuCI
+  #           stays at http://<node>/cgi-bin/luci/ throughout.
+  luciProxy:
+    enable: false
