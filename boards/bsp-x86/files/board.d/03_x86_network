@@ -1,0 +1,21 @@
+#!/bin/sh
+# Protectli VP2430 bench node: four Intel i226-V 2.5 GbE ports. Port 1 (eth0)
+# is WAN, the way Protectli labels the box, and ports 2-4 bridge into LAN so
+# a laptop, a second node or a switch can plug into any of them. The eth
+# order follows PCI enumeration; confirm it against the port labels on the
+# bench (bench-tracks/protectli bring-up step) before relying on it.
+
+. /lib/functions/uci-defaults.sh
+. /usr/libexec/bsp-x86/board
+
+board_config_update
+
+case "$(bsp_x86_role "$(board_name)")" in
+protectli-vp2430)
+	ucidef_set_interfaces_lan_wan "eth1 eth2 eth3" "eth0"
+	;;
+esac
+
+board_config_flush
+
+exit 0
