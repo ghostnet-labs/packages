@@ -104,10 +104,17 @@ endef
 define Package/libcamera/install
 	$(INSTALL_DIR) $(1)/usr/lib
 	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libcamera*.so* $(1)/usr/lib
+	# The IPA modules and share files only exist for targets whose pipeline
+	# handlers build them (not on mipsel, for example), so copy only what the
+	# install step produced.
 	$(INSTALL_DIR) $(1)/usr/lib/libcamera
-	$(CP) $(PKG_INSTALL_DIR)/usr/lib/libcamera/*.so* $(1)/usr/lib/libcamera
+	if ls $(PKG_INSTALL_DIR)/usr/lib/libcamera/*.so* >/dev/null 2>&1; then \
+		$(CP) $(PKG_INSTALL_DIR)/usr/lib/libcamera/*.so* $(1)/usr/lib/libcamera; \
+	fi
 	$(INSTALL_DIR) $(1)/usr/share/libcamera
-	$(CP) $(PKG_INSTALL_DIR)/usr/share/libcamera/* $(1)/usr/share/libcamera
+	if ls $(PKG_INSTALL_DIR)/usr/share/libcamera/* >/dev/null 2>&1; then \
+		$(CP) $(PKG_INSTALL_DIR)/usr/share/libcamera/* $(1)/usr/share/libcamera; \
+	fi
 endef
 
 define Package/libcamera-utils/install
