@@ -1,0 +1,20 @@
+#!/bin/sh
+# Print the bench role of this x86 box, or nothing when it has none.
+# Sourced by the bsp-x86 uci-defaults, board.d and hotplug scripts so the
+# board match lives in one place.
+#
+# board_name on x86 is "<sys_vendor> <product_name>" from DMI, lowercased
+# with every other character turned into '-' (target/linux/x86
+# base-files/lib/preinit/01_sysinfo). Protectli's DMI strings are not
+# confirmed on hardware yet, so match the vendor plus any VP2430 spelling
+# ("vp2430", "vp2430e", "vault-pro-vp2430", ...).
+
+bsp_x86_role() {
+	case "$1" in
+	protectli*vp2430*) echo protectli-vp2430 ;;
+	esac
+}
+
+if [ "${0##*/}" = board ]; then
+	bsp_x86_role "${1:-$(cat /tmp/sysinfo/board_name 2>/dev/null)}"
+fi

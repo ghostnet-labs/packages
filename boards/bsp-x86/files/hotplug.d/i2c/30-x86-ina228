@@ -1,0 +1,41 @@
+#!/bin/sh
+
+# Bind the bench node's battery monitor when its USB-I2C bridge appears.
+# An Adafruit INA228 (15 mOhm shunt) hangs off an Adafruit MCP2221A
+# (hid-mcp2221) on a USB port, the same chip as the CM5 bench track and V1.
+# x86 has no device tree to carry the shunt value, so set the ina238
+# driver's shunt_uohm parameter (firmware patch 993-0002) before declaring
+# the chip; openmanetd's battery provider then finds the "ina228" hwmon.
+
+SHUNT_UOHM=15000
+
+[ "$ACTION" = add ] || exit 0
+# Only the adapter itself (".../i2c-N"), not clients on it (".../N-0040").
+bus=${DEVPATH##*/}
+case "$bus" in
+i2c-[0-9]*) bus=${bus#i2c-} ;;
+*) exit 0 ;;
+esac
+
+. /lib/functions.sh
+. /usr/libexec/bsp-x86/board
+
+[ -n "$(bsp_x86_role "$(board_name)")" ] || exit 0
+
+adapter="/sys$DEVPATH"
+grep -qs '^MCP2221' "$adapter/name" || exit 0
+
+[ -e "/sys/bus/i2c/devices/$bus-0040" ] && exit 0
+
+param=/sys/module/ina238/parameters/shunt_uohm
+[ -e "$param" ] || modprobe ina238 2>/dev/null
+if [ -w "$param" ]; then
+	echo "$SHUNT_UOHM" > "$param"
+else
+	logger -t bsp-x86 "ina238 has no shunt_uohm parameter; current reads assume 10 mOhm"
+fi
+
+echo "ina228 0x40" > "$adapter/new_device" &&
+	logger -t bsp-x86 "ina228 at 0x40 on i2c-$bus"
+
+exit 0

@@ -1,0 +1,29 @@
+#!/bin/sh
+
+# The Protectli VP2430 bench node takes GNSS on its internal RS-232 header
+# (board label COM2, "COM1" in the firmware setup menu) through a MAX3232:
+# NMEA on RX/TX and the receiver's PPS on DCD (header pin 1). The USB-C
+# console is COM0, so the header is expected at /dev/ttyS1; that mapping is
+# unverified until the first boot, and the bring-up runbook checks it.
+# gpsd puts the tty into the pps-ldisc line discipline itself, which turns
+# DCD edges into /dev/pps0, so one device argument covers NMEA and PPS. The
+# MAX3232 inverts the pulse; gpsd picks the leading edge from the pulse
+# width, so no polarity setting is needed here.
+
+. /lib/functions.sh
+. /usr/libexec/bsp-x86/board
+
+[ -n "$(bsp_x86_role "$(board_name)")" ] || exit 0
+
+# Replace only the gpsd package default (/dev/ttyAMA0) or a USB GNSS
+# default; leave an operator's own device choice alone.
+case "$(uci -q get gpsd.core.device)" in
+''|/dev/ttyAMA0|/dev/ttyUSB0|/dev/ttyACM0) ;;
+*) exit 0 ;;
+esac
+
+uci set gpsd.core.device='/dev/ttyS1'
+uci set gpsd.core.enabled='1'
+uci commit gpsd
+
+exit 0
