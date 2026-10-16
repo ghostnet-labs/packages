@@ -30,7 +30,9 @@ jobs:
     # PRs (pull_request_target) stay on hosted runners. This job only runs the
     # pinned policy script from the base repo and calls the API; it must never
     # check out or execute PR-head code.
-    runs-on: ${{ (github.event_name != 'pull_request_target' || github.event.pull_request.head.repo.full_name == github.repository) && fromJSON('["self-hosted", "Linux", "ARM64"]') || 'ubuntu-latest' }}
+    # Hosted on purpose: this job holds a write token, so it must not share a persistent
+    # self-hosted runner with jobs that run PR code. Revisit with dedicated JIT runners.
+    runs-on: ubuntu-latest
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v4
