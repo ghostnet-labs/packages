@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# Feed the Protectli node's gpsd SHM segments (COM-port NMEA + DCD PPS) into
+# ntpd, as bsp-venice does for its on-board GNSS.
+
+. /lib/functions.sh
+. /usr/libexec/bsp-x86/board
+
+[ -n "$(bsp_x86_role "$(board_name)")" ] || exit 0
+
+mkdir -p /etc/ntpd.d
+cp /usr/share/bsp-x86/ntpd.d/gps.conf /etc/ntpd.d/gps.conf
+
+exit 0
