@@ -14,6 +14,19 @@ log() {
 	logger -t "$NAME" "$@"
 }
 
+# Succeed if an INA2xx battery monitor already has a hwmon device, e.g. one
+# declared by the ina228 DT overlay with its shunt value. Instantiating a
+# second client for the same chip would only fail or duplicate it.
+monitor_bound() {
+	local n
+
+	for n in /sys/class/hwmon/hwmon*/name; do
+		grep -qs '^ina2' "$n" && return 0
+	done
+
+	return 1
+}
+
 # Print the number of the first i2c-gpio (bit-banged) adapter, if any.
 gpio_bus() {
 	local d
@@ -41,6 +54,11 @@ start() {
 
 	enabled=$(uci -q get ups.battery.enabled)
 	[ "$enabled" = "0" ] && return 0
+
+	if monitor_bound; then
+		log "battery monitor already bound (devicetree), nothing to add"
+		return 0
+	fi
 
 	chip=$(uci -q get ups.battery.chip)
 	chip=${chip:-ina219}
