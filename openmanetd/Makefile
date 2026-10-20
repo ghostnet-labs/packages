@@ -3,16 +3,17 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=openmanetd
 
 PKG_VERSION:=1.3.10
-PKG_RELEASE:=14
+PKG_RELEASE:=15
 
 PKG_SOURCE_PROTO:=git
 # ghostnet-labs fork, main: release 1.3.10 plus the CM5 and Ghostnet V1
 # board support, MT7916 detection, battery status, the unified UI (setup
 # wizard handoff, LuCI proxy, secure session cookie, configurable
-# firmware-update source) and
-# the V1 hardware manager.
+# firmware-update source), the V1 hardware manager with its PTT guard,
+# the radio capacity gate (advisory by default) and channel migration
+# (off by default).
 PKG_SOURCE_URL:=https://github.com/ghostnet-labs/openmanetd
-PKG_SOURCE_VERSION:=c635c9149c816dedacd8be4ab29ae7401f33276c
+PKG_SOURCE_VERSION:=a0711ed8549a043924dbda7f7c9c6ceeee5e5dfa
 PKG_HASH:=skip
 
 PKG_LICENSE:=MIT
