@@ -109,3 +109,26 @@ Gain defaults: dump1090 uses `49.6` dB (set by adsbtocot). dump978-fa uses
 the receiver's maximum manual gain. To change it, set
 `dump978-fa.main.gain` to a number in dB, or to `auto` for tuner AGC, then
 commit and run `/etc/init.d/dump978-fa restart`.
+
+### Decoder replay in CI
+
+`.github/workflows/decoder-replay.yml` builds dump1090-fa and dump978-fa from
+the sources the feed pins and replays IQ through them
+(`tests/decoder-replay/run.sh`, which also runs on a workstation):
+
+- 1090 MHz: a real recording, `testfiles/modes1.bin` from antirez/dump1090,
+  must decode aircraft `4D2023` (`AMC421`, squawk `0112`) with positions.
+- 978 MHz: a synthesized UAT signal (`uat_gen.py`) must decode as `A1B2C3`
+  (`N978OM`), including frames with injected byte errors.
+
+## Wide tuner: Airspy R2 / Mini
+
+| Package | Contents |
+|---------|----------|
+| `libairspy` (`lib/airspyone_host`) | Airspy R2 / Mini library, up to 10 MS/s |
+| `airspy-tools` (`lib/airspyone_host`) | `airspy_info`, `airspy_rx` |
+| `soapy-airspy` | SoapySDR module: `driver=airspy,serial=<serial>` |
+
+Claim the Airspy by its 64-bit serial, never by index:
+`airspy_info` lists it, `airspy_rx -s 0x<serial>` opens it, and
+`SoapySDRUtil --find="driver=airspy"` shows the serial SoapySDR clients use.
