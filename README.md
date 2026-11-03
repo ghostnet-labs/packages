@@ -109,3 +109,15 @@ Gain defaults: dump1090 uses `49.6` dB (set by adsbtocot). dump978-fa uses
 the receiver's maximum manual gain. To change it, set
 `dump978-fa.main.gain` to a number in dB, or to `auto` for tuner AGC, then
 commit and run `/etc/init.d/dump978-fa restart`.
+
+## Wide tuner: Airspy R2 / Mini
+
+| Package | Contents |
+|---------|----------|
+| `libairspy` (`lib/airspyone_host`) | Airspy R2 / Mini library, up to 10 MS/s |
+| `airspy-tools` (`lib/airspyone_host`) | `airspy_info`, `airspy_rx` |
+| `soapy-airspy` | SoapySDR module: `driver=airspy,serial=<serial>` |
+
+Claim the Airspy by its 64-bit serial, never by index:
+`airspy_info` lists it, `airspy_rx -s 0x<serial>` opens it, and
+`SoapySDRUtil --find="driver=airspy"` shows the serial SoapySDR clients use.
