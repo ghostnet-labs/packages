@@ -44,10 +44,8 @@ env:
 jobs:
   replay:
     name: Replay IQ through dump1090-fa and dump978-fa
-    # Trusted runs use the Linux ARM64 runners on the Mac Studio; fork pull
-    # requests stay on GitHub-hosted runners (runner policy, docs #122).
-    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'ghostnet-linux-arm64' || 'ubuntu-latest' }}
-    timeout-minutes: 30
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6
 
@@ -76,15 +74,13 @@ jobs:
         run: |
           # No SDR backends: the replay reads --ifile, so librtlsdr and the
           # other vendor libraries are not needed.
-          make -C "$RUNNER_TEMP/dump1090" -j2 \
+          make -C "$RUNNER_TEMP/dump1090" -j"$(nproc)" \
             DUMP1090_VERSION="$DUMP1090_VERSION" \
             RTLSDR=no BLADERF=no HACKRF=no LIMESDR=no SOAPYSDR=no dump1090
 
       - name: Build dump978-fa
         run: |
-          # -j2: the ARM64 runners have 2 GiB; Boost-heavy C++ units
-          # can exhaust it at higher parallelism.
-          make -C "$RUNNER_TEMP/dump978" -j2 \
+          make -C "$RUNNER_TEMP/dump978" -j"$(nproc)" \
             VERSION="${DUMP978_COMMIT:0:7}" dump978-fa
 
       - name: Replay IQ and check the decoded aircraft
