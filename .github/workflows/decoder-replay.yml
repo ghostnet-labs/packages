@@ -1,0 +1,91 @@
+name: Decoder replay
+
+# Builds the aircraft decoders the feed ships, at the same upstream sources
+# the packages pin, natively on the runner and replays IQ through them, so a
+# source bump that stops decoding fails here instead of on a node. No SDR
+# hardware is involved.
+#
+# - 1090 MHz: a REAL over-the-air recording (antirez/dump1090
+#   testfiles/modes1.bin), fetched pinned by commit and sha256. dump1090-fa
+#   must decode aircraft 4D2023 (AMC421, squawk 0112) with positions.
+# - 978 MHz: a SYNTHESIZED UAT signal (tests/decoder-replay/uat_gen.py), since
+#   no UAT IQ recording is reliably hosted. dump978-fa must decode Basic and
+#   Long ADS-B frames for A1B2C3 / N978OM, correct injected byte errors up to
+#   each code's limit, and drop Basic frames beyond it.
+#
+# The steps live in tests/decoder-replay/run.sh, which runs the same way on a
+# workstation.
+
+on:
+  pull_request:
+    paths:
+      - utils/dump978-fa/**
+      - utils/adsbtocot/**
+      - lib/soapy*/**
+      - lib/airspyone_host/**
+      - tests/decoder-replay/**
+      - .github/workflows/decoder-replay.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+
+env:
+  # dump1090 comes from the openwrt/packages feed the firmware pins
+  # (953b6d47b4); its Makefile builds FlightAware tag v9.0, which is this
+  # commit.
+  DUMP1090_COMMIT: a80ba8f82a74c90a29619ddbc10909c561198541
+  DUMP1090_VERSION: v9.0
+
+jobs:
+  replay:
+    name: Replay IQ through dump1090-fa and dump978-fa
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential pkg-config libncurses-dev \
+            libboost-system-dev libboost-program-options-dev \
+            libboost-regex-dev libboost-filesystem-dev libsoapysdr-dev
+
+      - name: Fetch the pinned decoder sources
+        run: |
+          # dump978-fa: the commit utils/dump978-fa/Makefile builds.
+          DUMP978_COMMIT=$(sed -n 's/^PKG_SOURCE_VERSION:=//p' utils/dump978-fa/Makefile)
+          echo "dump1090 $DUMP1090_COMMIT, dump978 $DUMP978_COMMIT"
+          fetch() { # url commit dir
+            git init -q "$3"
+            git -C "$3" fetch -q --depth 1 "$1" "$2"
+            git -C "$3" -c advice.detachedHead=false checkout -q FETCH_HEAD
+          }
+          fetch https://github.com/flightaware/dump1090.git "$DUMP1090_COMMIT" "$RUNNER_TEMP/dump1090"
+          fetch https://github.com/flightaware/dump978.git "$DUMP978_COMMIT" "$RUNNER_TEMP/dump978"
+          echo "DUMP978_COMMIT=$DUMP978_COMMIT" >>"$GITHUB_ENV"
+
+      - name: Build dump1090-fa (file input only)
+        run: |
+          # No SDR backends: the replay reads --ifile, so librtlsdr and the
+          # other vendor libraries are not needed.
+          make -C "$RUNNER_TEMP/dump1090" -j"$(nproc)" \
+            DUMP1090_VERSION="$DUMP1090_VERSION" \
+            RTLSDR=no BLADERF=no HACKRF=no LIMESDR=no SOAPYSDR=no dump1090
+
+      - name: Build dump978-fa
+        run: |
+          make -C "$RUNNER_TEMP/dump978" -j"$(nproc)" \
+            VERSION="${DUMP978_COMMIT:0:7}" dump978-fa
+
+      - name: Replay IQ and check the decoded aircraft
+        run: |
+          tests/decoder-replay/run.sh \
+            "$RUNNER_TEMP/dump1090/dump1090" \
+            "$RUNNER_TEMP/dump978/dump978-fa" \
+            "$RUNNER_TEMP/replay"
