@@ -42,7 +42,6 @@ include ../lang/golang/golang-package.mk
 # __atomic_load_8" once the CI build VM turned on ccache (firmware #82).
 ifeq ($(GO_ARCH),mipsle)
   GO_PKG_TAGS:=noasm
-  TARGET_LDFLAGS += -latomic
 endif
 
 # Explicit runtime deps (correct OpenWrt syntax)
