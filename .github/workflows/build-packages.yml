@@ -4,7 +4,9 @@ name: Build packages
 # release the firmware builds on, using the firmware's pinned feeds, so a
 # broken Makefile, patch or source pin fails here instead of in a firmware
 # image build. bcm2712 (aarch64) and mt7621 (mipsel) cover both CPU families
-# the boards ship on.
+# the boards ship on. Packages compile through ccache, the same way the
+# firmware's build VM compiles them: openmanetd's mipsel link only broke with
+# ccache on (firmware #82, fixed in #36), so a plain compile here missed it.
 
 on:
   pull_request:
@@ -92,7 +94,7 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y build-essential clang flex gawk gettext git \
             libncurses-dev libssl-dev python3-setuptools rsync unzip zlib1g-dev \
-            file wget zstd swig
+            file wget zstd swig ccache
 
       - name: Download and verify the OpenWrt SDK
         if: env.PACKAGES != ''
@@ -135,13 +137,17 @@ jobs:
         if: env.PACKAGES != ''
         working-directory: sdk
         run: |
+          # Match the firmware build (build-firmware.yml in the firmware repo),
+          # which passes these on the make command line. CONFIG_CCACHE wraps
+          # TARGET_CC, which cgo also uses as its linker, in ccache.
+          ccache_args=(CONFIG_CCACHE=y "CONFIG_CCACHE_DIR=$RUNNER_TEMP/ccache")
           failed=
           for dir in $PACKAGES; do
             name=$(basename "$dir")
             echo "::group::$dir"
-            if ! make "package/$name/compile" -j"$(nproc)" V=s; then
+            if ! make "package/$name/compile" -j"$(nproc)" V=s "${ccache_args[@]}"; then
               # Rerun serially so the first real error ends the log.
-              make "package/$name/compile" -j1 V=s || failed="$failed $dir"
+              make "package/$name/compile" -j1 V=s "${ccache_args[@]}" || failed="$failed $dir"
             fi
             echo "::endgroup::"
           done
