@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=openmanetd
 
 PKG_VERSION:=1.3.10
-PKG_RELEASE:=16
+PKG_RELEASE:=17
 
 PKG_SOURCE_PROTO:=git
 # ghostnet-labs fork, main: release 1.3.10 plus the CM5 and Ghostnet V1
@@ -34,8 +34,15 @@ include ../lang/golang/golang-package.mk
 # GOARCH that isn't arm/arm64, breaking the mipsle cross-compile used by
 # halowlink2 (ramips/mt7621) and ht-hd01-v2 (ramips/mt76x8). The noasm build
 # tag falls back to scalar C. Documented in openmanetd's own CLAUDE.md.
+#
+# miniaudio also uses 64-bit atomics, which 32-bit MIPS has no instructions
+# for, so gcc emits __atomic_*_8 calls that only libatomic provides. malgo
+# adds -latomic for arm only. Link it explicitly on mipsle; without it the
+# halowlink2 and ht-hd01-v2 links failed with "undefined reference to
+# __atomic_load_8" once the CI build VM turned on ccache (firmware #82).
 ifeq ($(GO_ARCH),mipsle)
   GO_PKG_TAGS:=noasm
+  TARGET_LDFLAGS += -latomic
 endif
 
 # Explicit runtime deps (correct OpenWrt syntax)
@@ -48,7 +55,7 @@ define Package/openmanetd
   DEPENDS:=$(GO_ARCH_DEPENDS) +kmod-batman-adv +alfred +libc @IPV6 +libnl-tiny +librt \
 		+libopus +libevdev +alsa-lib +kmod-usb-core +kmod-usb-audio \
 		+kmod-sound-core +libopusfile +hidapi +libpam \
-		+rtl-sdr +airspy-tools
+		+rtl-sdr +airspy-tools +mipsel:libatomic
 endef
 
 define Package/openmanetd/description
