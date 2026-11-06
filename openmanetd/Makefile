@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=openmanetd
 
 PKG_VERSION:=1.3.10
-PKG_RELEASE:=17
+PKG_RELEASE:=18
 
 PKG_SOURCE_PROTO:=git
 # ghostnet-labs fork, main: release 1.3.10 plus the CM5 and Ghostnet V1
@@ -11,9 +11,11 @@ PKG_SOURCE_PROTO:=git
 # wizard handoff, LuCI proxy, secure session cookie, configurable
 # firmware-update source), the V1 hardware manager with its PTT guard,
 # the radio capacity gate (advisory by default) and channel migration
-# (off by default), and the aircraft/P25 scanner service (off by default).
+# (off by default), the aircraft/P25 scanner service (off by default),
+# gossip-based mesh topology on BATMAN_V, and the setup wizard's 5 GHz EUD
+# access point default (D-055).
 PKG_SOURCE_URL:=https://github.com/ghostnet-labs/openmanetd
-PKG_SOURCE_VERSION:=48d580796607202b8ad7dd5b70b1dee5f9b2f79d
+PKG_SOURCE_VERSION:=dec770fe402ad173f568d9a06986a289e3aae361
 PKG_HASH:=skip
 
 PKG_LICENSE:=MIT
