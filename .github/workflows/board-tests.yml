@@ -1,0 +1,41 @@
+name: Board script tests
+
+# Runs the shell unit tests under boards/*/tests/ (first-boot uci-defaults
+# and board.d scripts, run against mocked uci). They need no OpenWrt
+# build, so a change to a board's defaults is checked in seconds instead
+# of waiting for a firmware image.
+
+on:
+  pull_request:
+    paths:
+      - boards/**
+      - .github/workflows/board-tests.yml
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  test:
+    name: Board script tests
+    # Same-repo PRs and dispatches use the ARC standard pool; fork PRs stay
+    # hosted (the runner policy's fork-fallback route).
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'ghostnet-linux-arm64' || 'ubuntu-latest' }}
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v6
+
+      - name: Run every boards/*/tests/*.sh
+        run: |
+          set -euo pipefail
+          status=0
+          for t in boards/*/tests/*.sh; do
+            echo "::group::$t"
+            bash "$t" || { echo "::error file=$t::$t failed"; status=1; }
+            echo "::endgroup::"
+          done
+          exit "$status"

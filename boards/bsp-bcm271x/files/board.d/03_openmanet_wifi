@@ -2,34 +2,58 @@
 . /lib/functions.sh
 . /lib/functions/uci-defaults.sh
 
-# Give the CM5 node's 2.4/5 GHz radio (ath10k Mini-PCIe card) the same
-# OpenMANET AP defaults as the other boards: fixed channel, US country,
-# enabled, and the openmanet SSID/key. The HaLow radio (type morse) is
-# left to bsp-common's 99_morse_radio_defaults.
+# Factory Wi-Fi defaults for the CM5 node and V1 (decision D-055 in the
+# docs repo, GHO-89):
+#   - 5 GHz: the access point for the user's EUD. SSID "openmanet",
+#     fixed non-DFS channel 36 (so it comes up without a radar wait) at
+#     low transmit power, because the EUD is worn right next to the node.
+#   - 2.4 GHz: radio enabled so the batman-adv Wi-Fi backhaul is
+#     available, but its AP is off. Keeping the AP off 2.4 GHz also
+#     protects the GNSS margin.
+#   - 6 GHz: radio off.
+# The HaLow radio (type morse) is left to bsp-common's
+# 99_morse_radio_defaults. UCI defaults run once, so an operator's later
+# choices are never overwritten.
+OPENMANET_AP_SSID="openmanet"
+OPENMANET_AP_KEY="openmanet"
+OPENMANET_AP_CHANNEL_5G=36
+OPENMANET_AP_TXPOWER_5G=10
+OPENMANET_CHANNEL_2G=6
+
 setup_openmanet_wifi_radio() {
 	local radio="$1"
-	local type band channel ssid_name
+	local type band iface="default_$1"
 
 	config_get type "$radio" type
 	[ "$type" = "morse" ] && return 0
 
 	config_get band "$radio" band
 	case "$band" in
-	2g) channel=6 ;;
-	5g) channel=36 ;;
-	*) return 0 ;;
+	2g)
+		uci set wireless."$radio".channel="$OPENMANET_CHANNEL_2G"
+		uci set wireless."$radio".country="US"
+		uci set wireless."$radio".disabled="0"
+		uci -q get wireless."$iface" >/dev/null || return 0
+		uci set wireless."$iface".ssid="${OPENMANET_AP_SSID}_2g"
+		uci set wireless."$iface".encryption="psk2"
+		uci set wireless."$iface".key="$OPENMANET_AP_KEY"
+		uci set wireless."$iface".disabled="1"
+		;;
+	5g)
+		uci set wireless."$radio".channel="$OPENMANET_AP_CHANNEL_5G"
+		uci set wireless."$radio".country="US"
+		uci set wireless."$radio".txpower="$OPENMANET_AP_TXPOWER_5G"
+		uci set wireless."$radio".disabled="0"
+		uci -q get wireless."$iface" >/dev/null || return 0
+		uci set wireless."$iface".ssid="$OPENMANET_AP_SSID"
+		uci set wireless."$iface".encryption="psk2"
+		uci set wireless."$iface".key="$OPENMANET_AP_KEY"
+		uci -q delete wireless."$iface".disabled
+		;;
+	6g)
+		uci set wireless."$radio".disabled="1"
+		;;
 	esac
-
-	uci set wireless."$radio".channel="$channel"
-	uci set wireless."$radio".country="US"
-	uci set wireless."$radio".disabled="0"
-
-	ssid_name="openmanet"
-	[ "$band" = "5g" ] && ssid_name="${ssid_name}_5g"
-	uci -q get wireless.default_"$radio" >/dev/null || return 0
-	uci set wireless.default_"$radio".ssid="$ssid_name"
-	uci set wireless.default_"$radio".encryption="psk2"
-	uci set wireless.default_"$radio".key="openmanet"
 }
 
 board=$(board_name)
