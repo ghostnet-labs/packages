@@ -22,7 +22,9 @@ concurrency:
 jobs:
   test:
     name: Board script tests
-    runs-on: ubuntu-latest
+    # Same-repo PRs and dispatches use the ARC standard pool; fork PRs stay
+    # hosted (the runner policy's fork-fallback route).
+    runs-on: ${{ (github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository) && 'ghostnet-linux-arm64' || 'ubuntu-latest' }}
     timeout-minutes: 5
     steps:
       - uses: actions/checkout@v6
