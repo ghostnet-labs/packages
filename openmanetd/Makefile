@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=openmanetd
 
 PKG_VERSION:=1.3.10
-PKG_RELEASE:=19
+PKG_RELEASE:=20
 
 PKG_SOURCE_PROTO:=git
 # ghostnet-labs fork, main: release 1.3.10 plus the CM5 and Ghostnet V1
@@ -15,9 +15,11 @@ PKG_SOURCE_PROTO:=git
 # gossip-based mesh topology on BATMAN_V, the setup wizard's 5 GHz EUD
 # access point default (D-055), the ATAK feed of node data as plain CoT
 # (GHO-94), and jamming detection on every radio (GHO-93, read-only, on by
-# default; reads `iw survey dump`, which iw-full in the image provides).
+# default; reads `iw survey dump`, which iw-full in the image provides),
+# the coverage map, and phone onboarding (the /join page and ATAK APK and
+# settings package served to phones, which openmanet-phone-portal opens).
 PKG_SOURCE_URL:=https://github.com/ghostnet-labs/openmanetd
-PKG_SOURCE_VERSION:=28cb3f38ec2d3b0a5429f38bac573780a439e25b
+PKG_SOURCE_VERSION:=ecabadbaae97b0e6d3065cf573e54766c7274550
 PKG_HASH:=skip
 
 PKG_LICENSE:=MIT
