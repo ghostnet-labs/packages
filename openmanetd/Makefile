@@ -16,10 +16,12 @@ PKG_SOURCE_PROTO:=git
 # access point default (D-055), the ATAK feed of node data as plain CoT
 # (GHO-94), and jamming detection on every radio (GHO-93, read-only, on by
 # default; reads `iw survey dump`, which iw-full in the image provides),
-# the coverage map, and phone onboarding (the /join page and ATAK APK and
-# settings package served to phones, which openmanet-phone-portal opens).
+# the coverage map, phone onboarding (the /join page and ATAK APK and
+# settings package served to phones, which openmanet-phone-portal opens),
+# and the mesh join without a reboot with MAC-derived mesh addresses and
+# phone DHCP pools.
 PKG_SOURCE_URL:=https://github.com/ghostnet-labs/openmanetd
-PKG_SOURCE_VERSION:=ecabadbaae97b0e6d3065cf573e54766c7274550
+PKG_SOURCE_VERSION:=b2e1a2b2b6e34becb3683d34549aa85c32da478c
 PKG_HASH:=skip
 
 PKG_LICENSE:=MIT
