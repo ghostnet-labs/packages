@@ -12,10 +12,12 @@ PKG_SOURCE_PROTO:=git
 # firmware-update source), the V1 hardware manager with its PTT guard,
 # the radio capacity gate (advisory by default) and channel migration
 # (off by default), the aircraft/P25 scanner service (off by default),
-# gossip-based mesh topology on BATMAN_V, and the setup wizard's 5 GHz EUD
-# access point default (D-055).
+# gossip-based mesh topology on BATMAN_V, the setup wizard's 5 GHz EUD
+# access point default (D-055), the ATAK feed of node data as plain CoT
+# (GHO-94), and jamming detection on every radio (GHO-93, read-only, on by
+# default; reads `iw survey dump`, which iw-full in the image provides).
 PKG_SOURCE_URL:=https://github.com/ghostnet-labs/openmanetd
-PKG_SOURCE_VERSION:=dec770fe402ad173f568d9a06986a289e3aae361
+PKG_SOURCE_VERSION:=28cb3f38ec2d3b0a5429f38bac573780a439e25b
 PKG_HASH:=skip
 
 PKG_LICENSE:=MIT
