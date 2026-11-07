@@ -1,7 +1,7 @@
 include $(TOPDIR)/rules.mk
 
 PKG_NAME:=bsp-bcm271x
-PKG_RELEASE=14
+PKG_RELEASE=15
 PKG_VERSION:=1.0
 
 PKG_LICENSE:=GPLv2
@@ -18,6 +18,7 @@ define Package/bsp-bcm271x
 	SUBMENU:=Boards
 	TITLE:=OpenMANET BCM271x board support package
 	DEPENDS:=+bsp-common +kmod-fs-configfs +usbgadget +gpsd +ntpd \
+		+openmanet-phone-setup \
 		+PACKAGE_libcamera-utils:libcamera-utils \
 		+PACKAGE_mediamtx:mediamtx \
 		+PACKAGE_camera-onvif-server:camera-onvif-server
