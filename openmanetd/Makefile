@@ -59,7 +59,8 @@ define Package/openmanetd
   DEPENDS:=$(GO_ARCH_DEPENDS) +kmod-batman-adv +alfred +libc @IPV6 +libnl-tiny +librt \
 		+libopus +libevdev +alsa-lib +kmod-usb-core +kmod-usb-audio \
 		+kmod-sound-core +libopusfile +hidapi +libpam \
-		+rtl-sdr +airspy-tools +mipsel:libatomic
+		+rtl-sdr +airspy-tools +mipsel:libatomic \
+		+openmanet-phone-portal
 endef
 
 define Package/openmanetd/description
