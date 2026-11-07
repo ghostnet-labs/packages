@@ -1,0 +1,170 @@
+#!/bin/sh
+# shellcheck shell=dash # busybox ash: local is supported
+#
+# openmanet-phone-portal: open the phone setup page when a phone joins.
+#
+# A phone that joins a Wi-Fi network fetches a known URL (Android:
+# http://connectivitycheck.gstatic.com/generate_204, iPhone:
+# http://captive.apple.com/hotspot-detect.html) to see whether it has
+# internet. While this node has no internet, this service answers those
+# names with the node's own addresses (a hosts file dnsmasq reads), so the
+# check lands on uhttpd, whose 404 handler (/cgi-bin/openmanet-portal)
+# redirects it to openmanetd's /join page. The phone then shows "Sign in to
+# network" and opens /join.
+#
+# With internet the hosts file is removed, so phones reach the real check
+# and see a normal network. Two checks in a row must agree before the
+# state flips, so one lost ping does not toggle it.
+
+PORTAL_HOSTS_FILE=${PORTAL_HOSTS_FILE:-/tmp/hosts/openmanet-portal}
+
+# Connectivity check names used by Android (AOSP and Google builds),
+# Samsung, iOS and macOS, Windows, Firefox and GNOME. Only answered while
+# the node has no internet, when they would fail anyway.
+PORTAL_NAMES="connectivitycheck.gstatic.com connectivitycheck.android.com
+clients1.google.com clients3.google.com www.google.com play.googleapis.com
+www.gstatic.com captive.apple.com www.apple.com www.appleiphonecell.com
+www.msftconnecttest.com www.msftncsi.com detectportal.firefox.com
+nmcheck.gnome.org"
+
+log() {
+	logger -t openmanet-phone-portal "$*"
+}
+
+# portal_online succeeds if any check address answers a ping.
+portal_online() {
+	local ip
+	for ip in $PORTAL_CHECK_IPS; do
+		ping -c 1 -W 3 -q "$ip" >/dev/null 2>&1 && return 0
+	done
+	return 1
+}
+
+# portal_addresses prints the node's IPv4 addresses on the portal networks.
+portal_addresses() {
+	local net
+	for net in $PORTAL_NETWORKS; do
+		ubus call "network.interface.$net" status 2>/dev/null |
+			jsonfilter -e '@["ipv4-address"][*].address' 2>/dev/null
+	done
+	return 0
+}
+
+# portal_render prints the hosts file for the given addresses.
+portal_render() {
+	local ip name
+	for ip in "$@"; do
+		for name in $PORTAL_NAMES; do
+			printf '%s %s\n' "$ip" "$name"
+		done
+	done
+}
+
+portal_reload_dns() {
+	killall -HUP dnsmasq >/dev/null 2>&1
+	return 0
+}
+
+# portal_set writes the hosts file for the given addresses. It returns 1
+# (and touches nothing) when the file already says the same.
+portal_set() {
+	local tmp="$PORTAL_HOSTS_FILE.tmp"
+	mkdir -p "$(dirname "$PORTAL_HOSTS_FILE")"
+	portal_render "$@" >"$tmp"
+	if [ -f "$PORTAL_HOSTS_FILE" ] && cmp -s "$tmp" "$PORTAL_HOSTS_FILE"; then
+		rm -f "$tmp"
+		return 1
+	fi
+	mv "$tmp" "$PORTAL_HOSTS_FILE"
+	portal_reload_dns
+	return 0
+}
+
+# portal_clear removes the hosts file. It returns 1 when it was not there.
+portal_clear() {
+	[ -f "$PORTAL_HOSTS_FILE" ] || return 1
+	rm -f "$PORTAL_HOSTS_FILE"
+	portal_reload_dns
+	return 0
+}
+
+portal_load_config() {
+	PORTAL_ENABLED=1
+	PORTAL_NETWORKS="ahwlan lan"
+	PORTAL_CHECK_IPS="1.1.1.1 8.8.8.8 9.9.9.9"
+	PORTAL_INTERVAL=30
+
+	[ -f /lib/functions.sh ] || return 0
+	# shellcheck disable=SC1091 # OpenWrt only
+	. /lib/functions.sh
+	config_load openmanet_portal || return 0
+
+	local v
+	config_get_bool PORTAL_ENABLED main enabled 1
+	config_get v main network
+	[ -n "$v" ] && PORTAL_NETWORKS=$v
+	config_get v main check_ip
+	[ -n "$v" ] && PORTAL_CHECK_IPS=$v
+	config_get v main interval
+	case "$v" in
+		'' | *[!0-9]*) ;;
+		*) [ "$v" -ge 5 ] && PORTAL_INTERVAL=$v ;;
+	esac
+	return 0
+}
+
+# portal_step runs one check. It keeps the last result in PORTAL_LAST and
+# the applied state in PORTAL_STATE ("online", "offline" or "").
+portal_step() {
+	local now
+	if portal_online; then now=online; else now=offline; fi
+
+	if [ "$now" != "$PORTAL_LAST" ]; then
+		# First sighting of a new result: wait for the next check to
+		# agree, unless nothing has been applied yet.
+		PORTAL_LAST=$now
+		[ -n "$PORTAL_STATE" ] && return 0
+	fi
+
+	if [ "$now" = online ]; then
+		portal_clear && log "internet reachable: phones use the real check"
+		PORTAL_STATE=online
+		return 0
+	fi
+
+	# Offline: (re)write the file every check, so a changed node
+	# address is picked up.
+	local addrs
+	addrs=$(portal_addresses)
+	if [ -z "$addrs" ]; then
+		portal_clear && log "no address on: $PORTAL_NETWORKS"
+		PORTAL_STATE=offline
+		return 0
+	fi
+	# shellcheck disable=SC2086 # one address per word
+	portal_set $addrs && log "no internet: sending phones to /join via" $addrs
+	PORTAL_STATE=offline
+	return 0
+}
+
+portal_main() {
+	portal_load_config
+	if [ "$PORTAL_ENABLED" != 1 ]; then
+		# The init script does not start a disabled portal; this only
+		# runs when started by hand.
+		portal_clear
+		log "disabled"
+		return 0
+	fi
+
+	trap 'portal_clear; exit 0' INT TERM
+	PORTAL_LAST=
+	PORTAL_STATE=
+	while :; do
+		portal_step
+		sleep "$PORTAL_INTERVAL" &
+		wait $!
+	done
+}
+
+[ -n "$OPENMANET_PORTAL_LIB" ] || portal_main

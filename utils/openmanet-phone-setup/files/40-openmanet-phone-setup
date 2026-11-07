@@ -1,0 +1,21 @@
+#!/bin/sh
+# Set up an Android phone when it is plugged in with USB debugging on.
+#
+# A phone in debugging mode exposes an ADB interface: class 255, subclass
+# 66, protocol 1 (INTERFACE="255/66/1"). Match only that interface's "add"
+# event, so one plug-in starts one setup, and only when the node holds an
+# ATAK file. The setup runs in the background; it waits for the user to
+# tap Allow on the phone, and takes its own lock.
+
+[ "$ACTION" = add ] || exit 0
+[ "$DEVTYPE" = usb_interface ] || exit 0
+[ "$INTERFACE" = "255/66/1" ] || exit 0
+
+enabled=$(uci -q get openmanet_phone_setup.main.auto)
+[ "${enabled:-1}" = 1 ] || exit 0
+setup=${OPENMANET_PHONE_SETUP_BIN:-/usr/sbin/openmanet-phone-setup}
+[ -x "$setup" ] || exit 0
+
+logger -t openmanet-phone-setup "phone with USB debugging plugged in (${DEVICENAME:-unknown})"
+( "$setup" >/dev/null 2>&1 & )
+exit 0
