@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=openmanetd
 
 PKG_VERSION:=1.3.10
-PKG_RELEASE:=18
+PKG_RELEASE:=19
 
 PKG_SOURCE_PROTO:=git
 # ghostnet-labs fork, main: release 1.3.10 plus the CM5 and Ghostnet V1
@@ -57,7 +57,8 @@ define Package/openmanetd
   DEPENDS:=$(GO_ARCH_DEPENDS) +kmod-batman-adv +alfred +libc @IPV6 +libnl-tiny +librt \
 		+libopus +libevdev +alsa-lib +kmod-usb-core +kmod-usb-audio \
 		+kmod-sound-core +libopusfile +hidapi +libpam \
-		+rtl-sdr +airspy-tools +mipsel:libatomic
+		+rtl-sdr +airspy-tools +mipsel:libatomic \
+		+openmanet-phone-portal
 endef
 
 define Package/openmanetd/description

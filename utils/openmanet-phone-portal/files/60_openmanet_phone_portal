@@ -1,0 +1,14 @@
+#!/bin/sh
+
+# Route uhttpd's 404s through the portal CGI. A phone's connectivity
+# check (http://connectivitycheck.gstatic.com/generate_204 and friends)
+# lands on uhttpd while the node has no internet; the CGI turns it into
+# a redirect to /join and leaves every other 404 a 404. Set only when
+# unset, so an operator's own error page is kept.
+
+[ -n "$(uci -q get uhttpd.main.error_page)" ] && exit 0
+
+uci set uhttpd.main.error_page='/cgi-bin/openmanet-portal'
+uci commit uhttpd
+
+exit 0
