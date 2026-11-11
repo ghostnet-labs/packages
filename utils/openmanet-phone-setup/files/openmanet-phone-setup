@@ -1,0 +1,229 @@
+#!/bin/sh
+# shellcheck shell=dash # busybox ash: local is supported
+#
+# openmanet-phone-setup: set up an issued Android phone plugged into the
+# node by USB, with no internet and no taps beyond "Allow USB debugging".
+#
+#   1. install ATAK from the node's copy with every runtime permission
+#      granted (adb install -g), so ATAK never asks
+#   2. allow "all files" storage and background running, and exempt ATAK
+#      from battery saving (Doze), so it keeps reporting position
+#   3. join the phone to this node's Wi-Fi (Android 11+)
+#   4. open ATAK's import link for the node's settings package (callsign,
+#      team, role, map sources); the phone asks to confirm once
+#
+# The phone needs USB debugging on (Developer options) once. Runs by hand
+# (openmanet-phone-setup --callsign "Bravo 6") or from the USB hotplug
+# hook when a phone in debugging mode is plugged in.
+#
+# See docs/phone-onboarding.md in openmanetd.
+
+ONBOARD_DIR=${ONBOARD_DIR:-/srv/openmanet/onboard}
+ATAK_PACKAGES="com.atakmap.app.civ com.atakmap.app.mil com.atakmap.app"
+SETUP_LOCK=${SETUP_LOCK:-/var/run/openmanet-phone-setup.lock}
+
+say() {
+	echo "$*"
+	logger -t openmanet-phone-setup "$*"
+}
+
+# setup_wait_device waits up to $1 seconds for one authorized phone. It
+# prints its state and returns 0 when ready, 1 on timeout, 2 when more
+# than one phone is attached.
+setup_wait_device() {
+	local left=$1 state prompted=0 count
+	while [ "$left" -gt 0 ]; do
+		count=$(adb devices 2>/dev/null | grep -c '	device$')
+		[ "$count" -gt 1 ] && return 2
+		state=$(adb get-state 2>/dev/null)
+		case "$state" in
+			device) return 0 ;;
+		esac
+		if adb devices 2>/dev/null | grep -q '	unauthorized$' && [ "$prompted" = 0 ]; then
+			say "On the phone, tap Allow (tick Always allow from this computer)."
+			prompted=1
+		fi
+		sleep 2
+		left=$((left - 2))
+	done
+	return 1
+}
+
+# setup_installed_package prints the installed ATAK package name, if any.
+setup_installed_package() {
+	local list pkg
+	list=$(adb shell pm list packages com.atakmap 2>/dev/null | tr -d '\r')
+	for pkg in $ATAK_PACKAGES; do
+		if printf '%s\n' "$list" | grep -qx "package:$pkg"; then
+			printf '%s' "$pkg"
+			return 0
+		fi
+	done
+	return 1
+}
+
+# setup_grant relaxes Android limits that stop ATAK in the field. Each
+# step is best effort: older Android versions lack some of them.
+setup_grant() {
+	local pkg=$1
+	adb shell appops set "$pkg" MANAGE_EXTERNAL_STORAGE allow >/dev/null 2>&1
+	adb shell appops set "$pkg" RUN_ANY_IN_BACKGROUND allow >/dev/null 2>&1
+	adb shell appops set "$pkg" RUN_IN_BACKGROUND allow >/dev/null 2>&1
+	adb shell dumpsys deviceidle whitelist "+$pkg" >/dev/null 2>&1
+	return 0
+}
+
+# setup_ap prints "ssid<TAB>security<TAB>key" for this node's access point
+# on the ahwlan network, or nothing.
+setup_ap() {
+	local sec mode net disabled ssid enc key security
+	for sec in $(uci -q show wireless | sed -n "s/^wireless\.\([^.]*\)=wifi-iface$/\1/p"); do
+		mode=$(uci -q get "wireless.$sec.mode")
+		net=$(uci -q get "wireless.$sec.network")
+		disabled=$(uci -q get "wireless.$sec.disabled")
+		[ "$mode" = ap ] || continue
+		[ "$disabled" = 1 ] && continue
+		case " $net " in
+			*" ahwlan "*) ;;
+			*) continue ;;
+		esac
+		ssid=$(uci -q get "wireless.$sec.ssid")
+		enc=$(uci -q get "wireless.$sec.encryption")
+		key=$(uci -q get "wireless.$sec.key")
+		case "$enc" in
+			none | owe | '') security=open key='' ;;
+			sae*) security=wpa3 ;;
+			*) security=wpa2 ;;
+		esac
+		[ -n "$ssid" ] || continue
+		printf '%s\t%s\t%s\n' "$ssid" "$security" "$key"
+		return 0
+	done
+	return 1
+}
+
+# setup_node_ip prints this node's IPv4 address on ahwlan.
+setup_node_ip() {
+	ubus call network.interface.ahwlan status 2>/dev/null |
+		jsonfilter -e '@["ipv4-address"][0].address' 2>/dev/null
+}
+
+# setup_urlencode percent-encodes $1 for a query value.
+setup_urlencode() {
+	local s=$1 out='' c
+	while [ -n "$s" ]; do
+		c=${s%"${s#?}"}
+		s=${s#?}
+		case "$c" in
+			[A-Za-z0-9.~_-]) out="$out$c" ;;
+			*) out="$out$(printf '%%%02X' "'$c")" ;;
+		esac
+	done
+	printf '%s' "$out"
+}
+
+# setup_package_url prints the settings package URL for the profile.
+setup_package_url() {
+	local ip=$1 port=$2 callsign=$3 team=$4 role=$5 q=''
+	[ -n "$callsign" ] && q="${q}&callsign=$(setup_urlencode "$callsign")"
+	[ -n "$team" ] && q="${q}&team=$(setup_urlencode "$team")"
+	[ -n "$role" ] && q="${q}&role=$(setup_urlencode "$role")"
+	q=${q#&}
+	printf 'http://%s:%s/onboard/atak-setup.zip%s' "$ip" "$port" "${q:+?$q}"
+}
+
+# setup_wait_wifi waits up to $1 seconds for the phone to hold an address
+# in the node's /16.
+setup_wait_wifi() {
+	local left=$1 prefix=$2
+	while [ "$left" -gt 0 ]; do
+		adb shell ip -4 addr show wlan0 2>/dev/null | grep -q "inet $prefix" && return 0
+		sleep 2
+		left=$((left - 2))
+	done
+	return 1
+}
+
+setup_run() {
+	local callsign='' team='' role='' port=8080 wait=120
+	while [ $# -gt 0 ]; do
+		case "$1" in
+			--callsign) callsign=$2; shift 2 ;;
+			--team) team=$2; shift 2 ;;
+			--role) role=$2; shift 2 ;;
+			--port) port=$2; shift 2 ;;
+			--wait) wait=$2; shift 2 ;;
+			*) say "unknown option: $1"; return 64 ;;
+		esac
+	done
+
+	local apk="$ONBOARD_DIR/atak.apk"
+	if [ ! -f "$apk" ]; then
+		say "No ATAK file on this node. Upload it under Settings, Phones."
+		return 1
+	fi
+
+	adb start-server >/dev/null 2>&1
+	setup_wait_device "$wait"
+	case $? in
+		0) ;;
+		2) say "More than one phone is plugged in. Plug in one at a time."; return 1 ;;
+		*) say "No phone found. Turn on USB debugging in Developer options and plug it in."; return 1 ;;
+	esac
+
+	local model
+	model=$(adb shell getprop ro.product.model 2>/dev/null | tr -d '\r')
+	say "Setting up ${model:-phone}: installing ATAK (this takes a minute)."
+	if ! adb install -r -g "$apk" 2>&1 | tr -d '\r' | grep -q '^Success'; then
+		say "ATAK did not install. On Samsung, turn off Auto Blocker (Settings, Security and privacy) and plug in again."
+		return 1
+	fi
+
+	local pkg
+	pkg=$(setup_installed_package) || {
+		say "ATAK installed but its package was not found."
+		return 1
+	}
+	setup_grant "$pkg"
+	say "ATAK installed with its permissions; battery saving is off for it."
+
+	local ap ip ssid security key
+	ip=$(setup_node_ip)
+	ap=$(setup_ap)
+	if [ -n "$ap" ]; then
+		ssid=$(printf '%s' "$ap" | cut -f1)
+		security=$(printf '%s' "$ap" | cut -f2)
+		key=$(printf '%s' "$ap" | cut -f3)
+		if [ "$security" = open ]; then
+			adb shell cmd wifi connect-network "'$ssid'" open >/dev/null 2>&1
+		else
+			adb shell cmd wifi connect-network "'$ssid'" "$security" "'$key'" >/dev/null 2>&1
+		fi
+		say "Joining the phone to $ssid."
+	fi
+
+	if [ -z "$ip" ]; then
+		say "Done, but this node has no ahwlan address, so open http://<node>:8080/join on the phone to finish."
+		return 0
+	fi
+	if ! setup_wait_wifi 30 "${ip%.*.*}."; then
+		say "Done, but the phone did not join Wi-Fi. Join it, then open http://$ip:$port/join to finish."
+		return 0
+	fi
+
+	local url
+	url=$(setup_package_url "$ip" "$port" "$callsign" "$team" "$role")
+	adb shell am start -a android.intent.action.VIEW \
+		-d "'tak://com.atakmap.app/import?url=$(setup_urlencode "$url")'" >/dev/null 2>&1
+	say "Done. On the phone, tap Import in ATAK. You can unplug it."
+	return 0
+}
+
+setup_main() {
+	# One setup at a time: a second plug-in waits for the first.
+	exec 9>"$SETUP_LOCK"
+	flock 9
+	setup_run "$@"
+}
+
+[ -n "$OPENMANET_PHONE_SETUP_LIB" ] || setup_main "$@"

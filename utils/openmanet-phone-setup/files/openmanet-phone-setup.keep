@@ -1,0 +1,3 @@
+# Keep the node's ADB key across firmware upgrades, so phones that ticked
+# "Always allow from this computer" stay trusted.
+/root/.android/
