@@ -38,6 +38,29 @@ GO_PKG_LDFLAGS_X:=github.com/openmanet/openmanetd/cmd.version=$(PKG_VERSION)
 include $(INCLUDE_DIR)/package.mk
 include ../lang/golang/golang-package.mk
 
+# openmanetd no longer commits its built web app (static/, embedded with
+# //go:embed): two PRs that rebuilt it always conflicted. Its CI publishes
+# the build for every main commit to the static-bundles prerelease; fetch the
+# one for the pinned commit. Older pins that still carry static/ ignore it.
+OPENMANETD_STATIC:=openmanetd-static-$(PKG_SOURCE_VERSION).tar.gz
+
+define Download/openmanetd-static
+  FILE:=$(OPENMANETD_STATIC)
+  URL:=https://github.com/ghostnet-labs/openmanetd/releases/download/static-bundles
+  HASH:=skip
+endef
+$(eval $(call Download,openmanetd-static))
+
+define Build/Prepare
+	$(call Build/Prepare/Default)
+	if [ ! -f $(PKG_BUILD_DIR)/static/index.html ]; then \
+		mkdir -p $(PKG_BUILD_DIR)/static && \
+		$(TAR) -C $(PKG_BUILD_DIR)/static -xzf $(DL_DIR)/$(OPENMANETD_STATIC); \
+	fi
+	# Without the web app the binary builds but serves nothing: fail instead.
+	test -f $(PKG_BUILD_DIR)/static/index.html
+endef
+
 # miniaudio (via gen2brain/malgo) hardcodes -msse2 in its CGO flags for any
 # GOARCH that isn't arm/arm64, breaking the mipsle cross-compile used by
 # halowlink2 (ramips/mt7621) and ht-hd01-v2 (ramips/mt76x8). The noasm build
