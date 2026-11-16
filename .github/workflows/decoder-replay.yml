@@ -44,7 +44,7 @@ env:
 jobs:
   replay:
     name: Replay IQ through dump1090-fa and dump978-fa
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     timeout-minutes: 15
     steps:
       - uses: actions/checkout@v6

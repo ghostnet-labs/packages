@@ -20,7 +20,7 @@ jobs:
     if: github.event.action != 'closed'
     # Same-repo PRs use the Mac Studio runners; fork PRs stay on hosted
     # runners so outside code never executes on the self-hosted machine.
-    runs-on: ${{ github.event.pull_request.head.repo.full_name == github.repository && fromJSON('["self-hosted","macOS","ARM64"]') || 'ubuntu-latest' }}
+    runs-on: ${{ github.event.pull_request.head.repo.full_name == github.repository && fromJSON('["self-hosted","macOS","ARM64"]') || 'ubuntu-24.04' }}
     timeout-minutes: 350
     steps:
       - uses: actions/checkout@v4
@@ -32,7 +32,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           repository: ghostnet-labs/docs
-          ref: 20a720152e6f40f014dda3af08e5cae531a572e4
+          ref: e2cdaa5139a32e19d3d9569d06c632efa6fbb893
           path: runner-policy
           sparse-checkout: |
             project/scripts/check_runners.py
