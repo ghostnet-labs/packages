@@ -3,7 +3,7 @@ include $(TOPDIR)/rules.mk
 PKG_NAME:=openmanetd
 
 PKG_VERSION:=1.3.10
-PKG_RELEASE:=21
+PKG_RELEASE:=22
 
 PKG_SOURCE_PROTO:=git
 # ghostnet-labs fork, main: release 1.3.10 plus the CM5 and Ghostnet V1
@@ -19,11 +19,12 @@ PKG_SOURCE_PROTO:=git
 # the coverage map, phone onboarding (the /join page and ATAK APK and
 # settings package served to phones, which openmanet-phone-portal opens),
 # the mesh join without a reboot with MAC-derived mesh addresses and
-# phone DHCP pools, weather stations shared over the mesh, and the 32-bit
-# coverage build fix (openmanetd #75). The built web app comes from the
-# static-bundles download below.
+# phone DHCP pools, weather stations shared over the mesh, the 32-bit
+# coverage build fix (openmanetd #75), and offline ATAK map tiles served
+# from every node with a disk cache in /srv/openmanet/tiles (openmanetd #80,
+# GHO-95). The built web app comes from the static-bundles download below.
 PKG_SOURCE_URL:=https://github.com/ghostnet-labs/openmanetd
-PKG_SOURCE_VERSION:=3f2b95c44a9ee18cd6ac381502fe51450be294e4
+PKG_SOURCE_VERSION:=dcbd922fe7a3cc3a4631e84466ad9bbc41f5b95d
 PKG_HASH:=skip
 
 PKG_LICENSE:=MIT
